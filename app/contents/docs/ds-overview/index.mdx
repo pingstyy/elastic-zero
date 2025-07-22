@@ -1,0 +1,52 @@
+---
+title: Dataset Overview
+description: Coverage of self-generated and evaluation datasets.
+---
+
+# Dataset Overview
+
+## Absolute Zero
+
+- **Training:** _No external dataset required._ All task/solution pairs are self-generated via propose-solve loop:
+  - Code triplets: (program, input, output) tuples validated by python executor.
+  - Each buffer (abduction, deduction, induction) grows dynamically from valid proposals.
+
+  Example (seed triplet):
+```python
+  def f(x): return x
+```  
+Input: "Hello"
+Output: "Hello"
+
+
+- **Evaluation:** Benchmarks
+- **Code:** HumanEval+, MBPP+, LiveCodeBench
+- **Math:** AIME24, AIME25, AMC23, MATH500, OlympiadBench
+
+## Elastic Reasoning
+
+- **Training:** DeepSeekR1-Distill-Qwen (for pretraining), then RL rollout under budget constraints on the same datasets:
+- **Math:** AIME 1984–2023, AMC, Omni-Math, STILL
+- **Code:** TACO, SYNTHETIC-1, LiveCodeBench (2023/05+)
+
+- **Evaluation:** Same as above, with focus on Pass@1/accuracy and token efficiency.
+
+### Data Details
+
+- For code, all triplets must execute error-free and remain deterministic across runs.
+- Generation size scales with model performance and curriculum growth.
+- No leaks across benchmarks; cross-validation on OOD tasks.
+
+<Files
+items={[
+  {type: 'folder', name: 'buffers', children:[
+    {type: 'file', name: 'deduction.pkl'},
+    {type: 'file', name: 'abduction.pkl'},
+    {type: 'file', name: 'induction.pkl'}
+  ]}
+]}
+/>
+
+<Note>
+All train/test data for AZR come entirely from self-play; for ER, RL fine-tuning is performed entirely on public math/code benchmarks.
+</Note>

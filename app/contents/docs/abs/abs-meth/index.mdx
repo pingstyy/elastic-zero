@@ -1,0 +1,121 @@
+---
+title: Absolute Zero [Methodology]
+description: Technical methodology and algorithmic details behind Absolute Zero RL SelfPlay Reasoning with Zero Data
+---
+
+# Absolute Zero: Methodology & Self-Play Algorithms
+
+## Absolute Zero Paradigm
+
+The core of Absolute Zero is *self-evolution* — the LLM simultaneously learns to **propose** new tasks and to **solve** them, forming a closed, self-healing RLVR loop.
+
+**No external datasets, queries, or labels are needed. All data are bootstrapped from model-environment interaction.**
+
+## Multirole Self-Play Training Loop
+
+The training objective couples proposer and solver policies via a verifiable environment:
+
+- The model samples a latent variable `z`
+- It proposes task `tau` from a proposer policy
+- The environment function `f_e` validates the task and generates the gold output `y*`
+- The solver attempts to solve the task, generating output `y`
+- The proposer is rewarded based on learnability
+- The solver is rewarded if `y` matches `y*`
+- Model is updated using expected total reward
+
+## Task Triplet Modes
+
+- **Deduction**: Predict output given (program, input)
+- **Abduction**: Infer input given (program, output)
+- **Induction**: Synthesize program from input-output examples and a description
+
+All validation is performed by secure code execution (e.g., Python VM), ensuring reward correctness and preventing reward hacking.
+
+## Buffer Management
+
+Three growing buffers: one each for abduction, deduction, and induction.
+
+- Buffers are initialized with identity or trivial tasks
+- For each batch, K reference triplets are sampled to guide diverse task generation
+- Only valid tasks (safe, deterministic, and non-erroring) are added
+- Buffers serve both the proposer and solver roles
+
+## Reward Design
+
+### Proposer Reward (Learnability)
+
+If solver gets all wrong or all correct → proposer gets 0  
+Otherwise → proposer reward = 1 minus the mean solver reward
+
+### Solver Reward
+
+Reward = 1 if output matches gold  
+Reward = 0 if incorrect
+
+### Final Reward Signal
+
+- Passable and correct → reward from role (proposer or solver)
+- Wrong format but correct type → -0.5
+- Invalid format → -1
+
+## RL Update: Task-Relative Baselines
+
+For each of the six role-task combinations (solve/propose × induction/deduction/abduction):
+
+- Compute a separate reward mean and standard deviation
+- Normalize reward: `(r - mean) / std`
+- This stabilizes multitask reinforcement learning and reduces variance
+
+## Determinism and Safety
+
+To ensure reproducibility and verifiability:
+
+- All programs must be deterministic (run multiple times, same output)
+- Unsafe libraries like `os`, `sys`, `shutil` are blocked
+
+## Algorithmic Summary (Pseudocode)
+
+```python
+for t in range(T):
+    # PROPOSE phase
+    for task_type in ["deduction", "abduction", "induction"]:
+        refs = sample_K_from_buffer(task_type)
+        proposal = model.propose(task_type, refs)
+        if validate(proposal):
+            buffer[task_type].append(proposal)
+    
+    # SOLVE phase
+    for task in sample_batch_from_buffers(B):
+        solution = model.solve(task)
+        reward = compute_reward(solution, task)
+        update_model_rl(reward, baseline="per task-role")
+
+```
+
+---
+
+## 🧠 Key Differences (Absolute Zero vs. Traditional “Zero Setting”)
+
+| Property            | Zero Setting                        | **Absolute Zero**                                |
+|---------------------|--------------------------------------|--------------------------------------------------|
+| Data Dependency     | Curated QA pairs (no rationale)      | **No data of any kind**                          |
+| Learning Type       | Supervised prompt tuning             | **Reinforced self-play**                         |
+| Curriculum Building | Static                              | **Emergent, from multi-role buffers**            |
+| Roles Involved      | Answer-only                          | **Deduction, Abduction, Induction**              |
+| Use Case            | Benchmark QA                         | **Generalized self-learned reasoning tasks**     |
+
+Absolute Zero initiates from nothing but a seed model and develops task-agnostic buffers that evolve through *RL-driven curriculum construction*.
+
+---
+
+<Note title="Implementation Details">
+For buffer initialization, validation filters, and multitask role-specific updates, see the **Appendix Algorithm 1** and Section 3 of the paper.
+</Note>
+
+---
+
+## 📎 References
+
+2. Zhao et al., *"Absolute Zero: Reinforced Self-Play Reasoning with Zero Data"*, [arXiv:2505.03335v2](https://arxiv.org/abs/2505.03335)
+
+

@@ -1,0 +1,28 @@
+---
+title: Broader Impacts & Limitations
+description: Societal, ethical, and practical impact, and known limitations of Elastic Reasoning and Absolute Zero approaches.
+---
+
+# Broader Impacts & Limitations
+
+## Societal & Ethical Impact
+
+- **Budget-aware reasoning**: Enables lower-cost, more sustainable model deployment (energy, resources).
+- **Self-improving LLMs**: Reduces need for massive human-labeled datasets, democratizing state-of-the-art reasoning research.
+- **Education & Access**: Adaptive, scalable models can reach under-served domains and communities.
+
+## Potential Risks & Limitations
+
+- **Failure at segmentation**: Elastic Reasoning’s split thinking/solution may not suit highly interleaved QA/dialogue or non-monolithic problem types.
+- **Opaque failure**: Token budgeting may hide critical partial reasoning, harming interpretability.
+- **Safety issues**: Self-play (AZR) can generate unanticipated or sensitive content (“uh-oh moments”), particularly with very large/capable LLMs.
+
+## Limitations
+
+- Domain focus: Math/code settings dominate current evaluation. Further work needed for scientific question answering, multimodal, retrieval, or high-stakes domains.
+- Still requires substantial compute at >10B scale.
+- Safety-aware curriculum, meta-learning signals, and real-world deployment protocols are open problems.
+
+<Note title="Responsible Use">
+Always inspect generated solutions and avoid deploying unconstrained self-play agents in production for high-stakes uses without oversight.
+</Note>

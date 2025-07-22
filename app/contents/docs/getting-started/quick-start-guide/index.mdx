@@ -1,0 +1,104 @@
+---
+title: Quick Start
+description: Get started quickly with the project setup and basic usage.
+---
+
+Follow these steps to set up and run the project efficiently.
+
+## Prerequisites
+
+Ensure you have Python 3.10+ installed. Clone the repository:
+Preferably python=3.12
+
+## 🧱 Installation
+
+This repo supports **Poetry**, **uv**, or plain **pip**. Follow the steps below to get started.
+
+### 1. Python & Virtual Environment
+
+Ensure you’re using **Python 3.10+**. Start by creating an isolated environment.
+
+```bash
+# Clone the repo
+git clone https://github.com/your-org/repo-name.git
+cd repo-name
+
+# Create and activate virtual environment
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+````
+
+---
+
+### 2. Installing Dependencies
+
+You can install using **Poetry**, **uv**, **pip**, or from `setup.py`.
+
+#### Option A: Using Poetry
+
+```bash
+# If poetry is not installed
+pip install poetry
+
+# Install dependencies
+poetry install
+```
+
+> ✅ **Note:** Poetry handles both dependencies and virtualenv management. If you use Poetry's built-in venv, skip manual `.venv` creation.
+
+#### Option B: Using uv (fast pip-compatible installer)
+
+```bash
+pip install uv
+uv pip install -r requirements.txt
+```
+
+#### Option C: Using pip (classic)
+
+```bash
+pip install -r requirements.txt
+```
+
+#### Option D: Using setup.py
+
+```bash
+pip install .
+# or, for development mode
+pip install -e .
+```
+
+---
+
+### 3. Running the Project
+
+Run the main entry point using one of the following:
+
+#### With Poetry
+
+```bash
+poetry run python run.py
+```
+
+#### With uv (same as pip)
+
+```bash
+python run.py
+```
+
+#### Directly (if in .venv)
+
+```bash
+python run.py
+```
+
+---
+
+<Note title="Troubleshooting">
+```Python
+  If you encounter installation errors, 
+  ensure your Python version matches the required version (3.10+),
+  and that your virtual environment is activated.
+```
+</Note>
+
+---

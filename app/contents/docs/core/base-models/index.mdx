@@ -1,0 +1,26 @@
+---
+title: Baseline Models
+description: Baseline and control models used for fair evaluation.
+---
+
+# Baseline Models
+
+## Absolute Zero
+
+- **Qwen2.5-7B Base**: standard LLM baseline, no RLVR or curated data
+- **Qwen2.5-7B Instruct**: instruction-tuned, no reasoning RL tuning
+- **Qwen2.5-7B Coder/Math**: pretrained for code or math domain
+
+**Comparisons:**
+- **Zero-Setting RLVR**: RL-finetuned with only outcome-based rewards _but still using curated QA pairs_ (e.g., ORZ, SimpleRL-Zoo)
+- **Supervised SFT**: uses rationales and gold trajectories
+
+## Elastic Reasoning
+
+- **S1**: emits “Final Answer” token; simplistic budget control (high accuracy cost)
+- **L1-Max / L1-Exact**: RL fine-tuning with trajectory length reward or explicit length constraint
+- **O1, R1, DeepSeek-AI**: other SOTA RL-optimized reasoners (baseline for scaling and budget generalization)
+
+<Note>
+For all tables, scores are reported for zero-shot, no-context, and in/out-of-distribution splits. Full details are in Evaluation & Metrics.
+</Note>

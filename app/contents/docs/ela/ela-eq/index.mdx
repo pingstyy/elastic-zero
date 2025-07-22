@@ -1,0 +1,101 @@
+---
+title: Elastic Reasoning — Key Equations Explained
+description: Mathematical details from Scalable Chain-of-Thoughts via Elastic Reasoning.
+---
+
+# Key Equations in Elastic Reasoning
+
+Elastic Reasoning modifies the RL pipeline and inference with these mathematical foundations:
+
+## Separate Budgeting
+
+Total output budget `c` is allocated as `t` for thinking and `s` for solution, so:
+
+```
+c = t + s
+```
+
+At inference:
+- The model generates up to `t` tokens in the `<think>` phase.
+  - If it hasn't emitted `</think>`, forcibly insert the token.
+- Then the model continues with the solution segment, up to `s` tokens.
+
+The full output is:
+
+```
+y = (y\_think, y\_solution)
+
+```
+
+with the constraints:
+
+```
+
+len(y\_think) <= t
+len(y\_solution) <= s
+
+```
+
+## RL Training Objective (Budget-Constrained Rollout)
+
+Expected reward under fixed budget rollout:
+
+```
+
+J(θ) = E\_{x, y \~ π\_θ(y | x; t\*, s\*)} \[ r(y) ]
+
+```
+
+### Gradient (via GRPO):
+
+```
+
+∇*θ J(θ) = E*{x, y} \[ A(x, y) ∇\_θ log π\_θ(y | x; t\*, s\*) ]
+
+```
+
+### Advantage Baseline:
+
+```
+
+A(x, y) = r(y) - E\_{y' \~ π\_θ(y' | x; t\*, s\*)} \[ r(y') ]
+
+````
+
+This formulation reduces variance during training by normalizing the reward against the expected return under current policy and fixed budgets.
+
+## Pseudocode: Budgeted Generation
+
+```python
+def elastic_reason(model, input, t, s):
+    tokens = []
+
+    # Thinking phase
+    for i in range(t):
+        tok = model.next_token(input + tokens)
+        tokens.append(tok)
+        if tok == '</think>':
+            break
+    else:
+        tokens.append('</think>')
+
+    # Solution phase
+    for j in range(s):
+        tok = model.next_token(input + tokens)
+        tokens.append(tok)
+        # Optionally, allow early stopping
+        # if tok == '</sol>':
+        #     break
+
+    return tokens
+````
+
+<Note>
+See also Eq (1) and (2) in the Elastic Reasoning paper [1] for derivation of policy gradients with budget-aware rollouts.
+</Note>
+
+---
+
+## Reference
+
+\[1] Xu et al. *"Scalable Chain-of-Thoughts via Elastic Reasoning"*, [arXiv:2505.05315v2](https://arxiv.org/abs/2505.05315)

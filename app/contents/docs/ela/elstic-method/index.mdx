@@ -1,0 +1,131 @@
+---
+title: Elastic Reasoning — Methodology
+description: Technical methodology and algorithms behind Scalable Chain-of-Thoughts via Elastic Reasoning.
+---
+
+# Elastic Reasoning: Methodology & Algorithms
+
+## Preliminaries: Reasoning Trajectory Factorization
+
+In Elastic Reasoning, the LLM output `y` is factorized as:
+
+```
+
+y = (y\_think, y\_solution)
+
+```
+
+Where `y_think` spans tokens between `<think>` and `</think>`, and `y_solution` is the post-`</think>` solution segment.
+
+## Separate Budgeting
+
+Given total generation budget `c`, allocate `t` for thinking and `s` for solution:
+
+```
+
+c = t + s
+
+```
+
+**Inference:**
+1. Thinking: Model emits tokens up to `t`, forcibly ends with `</think>` if needed.
+2. Solution: Model emits up to `s` tokens.
+
+This guarantees that the solution is never truncated due to overall budget, ensuring reliability under tight constraints.
+
+## Budget-Constrained Rollout RL
+
+Elastic Reasoning integrates **GRPO** (Generalized REINFORCE with Policy Optimization) to simulate inference-time constraints during training.
+
+- Sample a training pair `(t*, s*)`, e.g., `t* = 1000`, `s* = 1000`.
+- Train with rollouts truncated at `t*` and `s*`.
+
+Training objective:
+
+```
+
+J(θ) = E\_{x, y \~ π\_θ(y | x; t\*, s\*)} \[ r(y) ]
+
+```
+
+Gradient estimator:
+
+```
+
+∇\_θ J(θ) = E\[ A(x, y) ∇\_θ log π\_θ(y | x; t\*, s\*) ]
+
+```
+
+Where the advantage is:
+
+```
+
+A(x, y) = r(y) - E\_{y'} \[ r(y') ]
+
+```
+
+## Inference Flexibility
+
+Even though training is done with a single budget pair `(t*, s*)`, the model generalizes at inference to *any* `(t', s')`:
+
+```
+
+π\_θ(y | x; t', s')
+
+````
+
+This works without additional fine-tuning because the model internalizes budget sensitivity during rollout training.
+
+## ⚙️ Algorithm (Pseudocode)
+
+```python
+def elastic_reasoning(model, input, t, s):
+    output = []
+
+    # Step 1: Thinking phase
+    for _ in range(t):
+        tok = model.next_token(input + output)
+        output.append(tok)
+        if tok == "</think>":
+            break
+    else:
+        output.append("</think>")
+
+    # Step 2: Solution phase
+    for _ in range(s):
+        tok = model.next_token(input + output)
+        output.append(tok)
+
+    return output
+````
+
+---
+
+## 🧪 Training Loop
+
+Per training step:
+
+* Apply **budget-constrained sampling** with a fixed `(t, s)` pair.
+* Compute **reward** based on correctness and trajectory quality.
+* Log intermediate structure for curriculum insights.
+
+---
+
+## 💡 Key Insights
+
+* **Model-Agnostic**: Works with any decoder-only LLM supporting autoregressive sampling.
+* **Highly Efficient**: Reduces tokens by over 30% while improving reasoning clarity and correctness.
+* **Outperforms Baselines**: Better than S1 (prompt-only), L1 (rollout), and naive truncation methods.
+* **Structured CoT**: Maintains clear separation and alignment between thought and solution.
+
+<Note title="Generalization">
+Elastic Reasoning models trained with a fixed pair (t*, s*) reliably generalize to unseen (t, s) test-time settings. This builds a strong inductive bias for modular reasoning and scalable CoT.
+</Note>
+
+---
+
+## 📎 References
+
+1. Xu et al. *"Scalable Chain-of-Thoughts via Elastic Reasoning"*, [arXiv:2505.05315v2](https://arxiv.org/abs/2505.05315)
+
+For full ablation tables, buffer tuning, and trajectory visualizations, refer to Appendix A and B in the paper.

@@ -1,0 +1,77 @@
+---
+title: Elastic Reasoning — Paper Summary
+description: Comprehensive technical summary of Scalable Chain-of-Thoughts via Elastic Reasoning.
+---
+
+# Elastic Reasoning: Technical Summary
+
+> “Explicit separation of reasoning into <think>...</think> and <solution>...</solution> phases, with budget control, yields scalable and reliable Chain-of-Thought (CoT) reasoning.” — Xu et al. (2025)[1]
+
+## Motivation
+
+- Standard LLMs produce variable-length CoT, making controllable deployment and cost-constrained inference unsolved.
+- Existing length control harms accuracy or is inflexible.
+
+## Principle
+
+Elastic Reasoning explicitly divides the model’s output (`y`) into *thinking* (`y_think`) and *solution* (`y_solution`) segments. Each phase gets an independent token budget: `t` for thinking, `s` for solution (so total budget `c = t + s`).
+
+At inference:
+- Generate under a `<think>` marker until `t` tokens OR model emits `</think>`, whichever comes first.
+- Switch to solution phase, up to `s` tokens.
+- Ensures the final answer is never truncated by a tight budget.
+
+## Methodology
+
+**Budget-Constrained Rollout RL** (core idea):
+
+- Train model via GRPO using fixed reasoning/solution budgets (`t*`, `s*`), forcing truncation with a special `</think>` token if necessary.
+
+Training objective:
+
+```
+
+J(θ) = E\_{x, y \~ π\_θ}\[ r(y) ]
+
+```
+
+Gradient estimator:
+
+```
+
+∇*θ J(θ) = E*{x, y}\[ A(x, y) ∇\_θ log π\_θ(y | x; t\*, s\*) ]
+
+```
+
+Where `A(x, y)` is a baseline-reduced advantage term.
+
+## Results
+
+| Model          | AIME24 Pass@1 (%) | Tokens/Q | Training steps | AMC (Pass@1) |
+|----------------|-------------------|----------|----------------|--------------|
+| E1-Math-1.5B   | 35.0              | 1619     | 200            | 70.3         |
+| L1-Max         | 27.1              | 1796     | 820            | ~60          |
+| S1             | 24.2              | 1900     | ~800           | ~55          |
+
+- Over 30% token reduction compared to baseline, with better or equal accuracy.
+- Model generalizes to arbitrary test-time budgets, even though it was trained on a fixed pair (`t*`, `s*`).
+
+## Key Insights
+
+- Budget-constrained rollout improves not just length control but *solution quality*.
+- Trained models tend to "front-load" important reasoning early in the `<think>` segment.
+- Concise, efficient reasoning emerges as a side effect of budget pressure.
+
+## Implementation Note
+
+Training can be completed in ~200 RL steps on math tasks. The training loop simulates budget truncation per batch. Inference is fully flexible — users can adjust `t` and `s` without retraining.
+
+<Note>
+For full benchmark logs, ablations, and formal equations, refer to other pages or the original paper [1].
+</Note>
+
+---
+
+## Reference
+
+[1] Xu et al. *"Scalable Chain-of-Thoughts via Elastic Reasoning"*, [arXiv:2505.05315v2](https://arxiv.org/abs/2505.05315)

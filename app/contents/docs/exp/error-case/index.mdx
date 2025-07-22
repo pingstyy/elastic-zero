@@ -1,0 +1,70 @@
+---
+title: Error Case Studies
+description: Case analysis of errors, failure modes, and remedy strategies for Elastic Reasoning and Absolute Zero implementations.
+---
+
+# Error Case Studies
+
+A rigorous understanding of where and why scalable reasoning models fail is critical. Here, we present key error classes, case samples, and remedies from the original Elastic Reasoning [1] and Absolute Zero [2] implementations.
+
+## I. Elastic Reasoning: Error Patterns
+
+### 1. **Premature `<think>` Termination**
+**Observation:**  
+Model emits `</think>` before using full allotted “thinking” tokens—leaving `solution` phase with insufficient context for hard problems.  
+**Remedy:**  
+Budget-constrained RL training (GRPO) with stricter reward on *final answer* completion increases use of thinking budget only for hard problems; for easy tasks, short thinking is rewarded.
+
+### 2. **Over-long Reasoning, Truncated Solutions**
+**Symptom:**  
+Naive length budgets cause solution segment truncation; answer is clipped or empty.  
+**Remedy:**  
+Use separate budgets, always force `</think>` if reasoning budget (\(t\)) is exhausted, guaranteeing a full solution segment (see Sec. 3.2.2 [1]).
+
+### 3. **Budget Generalization Failures**
+Budget pairs (t*,s*) seen at train time may not always transfer, especially on unseen domains.  
+Empirically, ER generalizes to new (t, s) pairs, but extreme low-(t,s) can expose limitations (see Fig. 4 in [1]).  
+**Remedy:**  
+Train on a “reasonable” budget range, monitor token allocation histograms post-train.
+
+---
+
+## II. Absolute Zero: Error Patterns
+
+### 1. **Proposal Failure or Invalidity**
+Proposer offers non-deterministic, unsafe, or ill-formatted program as candidate triplet.
+- **Remedy:**  
+  Use strong program validators — syntax, deterministic outputs (run twice), and reject use of forbidden imports like `os`, `sys`.
+
+### 2. **Reward Hacking and Unlearnable Tasks**
+Proposer emits tasks that are always trivial or unsolvable (learnability reward = 0 or 1).  
+- **Remedy:**  
+  Only reward tasks for which the solver’s average reward is strictly between 0 and 1; buffer and curriculum components can drop non-contributing triplets (Eq. 4 in [2]).
+
+### 3. **Mode-specific Failure**
+- *Deduction:* Solver produces output string with wrong answer due to missing function knowledge.
+- *Abduction:* Model fails to infer valid input, gets stuck in trial-and-error cycle.
+- *Induction:* Overfits to test cases in prompt but fails on withheld OOD cases.
+**Remedy:** Hold-out buffer, detailed input-output parity in validation code (Figures 10-12, [2]).
+
+### 4. **Safety and “Uh-Oh” Moments**
+Some large models (esp. Llama3.1-8B) occasionally produce inappropriate or ungrounded outputs (“uh-oh moments”, Sec. 4.2.5 in [2]).
+- **Remedy:**  
+  Manual review and future research into safety-aware reward shaping.
+
+---
+
+## III. Debugging Rhythms
+
+- Log both *failure mode* and *buffer contents* during runs.
+- Use eval scripts that explicitly check (type, value, formatting) for all outputs; plot error class distribution.
+- Recovery: allow filling batches with valid old buffer entries if proposer/solver output is invalid.
+
+<Note>
+Most critical errors arise from the interface between program generation (proposer) and environment validation. RL + stricter verifiers is necessary for robust self-play loops.
+</Note>
+
+---
+**References**
+- [1] Xu, Y. et al. (2025). Scalable Chain-of-Thoughts via Elastic Reasoning (arXiv:2505.05315v2).
+- [2] Zhao, A. et al. (2025). Absolute Zero: Reinforced Self-play Reasoning with Zero Data (arXiv:2505.03335v2).

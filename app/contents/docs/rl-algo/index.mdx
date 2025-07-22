@@ -1,0 +1,34 @@
+---
+title: RL Algorithms Used
+description: Algorithms for policy optimization under both paradigms.
+---
+
+# RL Algorithms Used
+
+## Elastic Reasoning: GRPO (Generalized REINFORCE with Policy Optimization)
+- Budget-constrained rollout: RL policy unrolls (t, s)-budgeted trajectories during training, using token-efficient policy.
+- Rewards: task-specific (e.g., Pass@1).
+- Baseline: for each batch, mean reward among rollouts.
+
+Gradient estimator:
+
+\[
+\nabla_\theta J(\theta) = \mathbb{E}_{x, y}[A(x, y) \nabla_\theta \log \pi_\theta(y|x; t^*, s^*)]
+\]
+
+## Absolute Zero: Task-Relative REINFORCE++
+- Multitask RL variant with separate baselines for each (role,task_type) pair for variance reduction.
+- Rewards: binary correctness (solver), learnability (proposer, as \(1 - \bar r_{solve}\) when not 0/1).
+- Baseline: running mean/std for each (task,role).
+
+Advantage estimator (TRR++, Eq.8 in AZR):
+
+\[
+A_{\text{norm,task,role}} = \frac{r - \mu_{\text{task,role}}}{\sigma_{\text{task,role}}}
+\]
+
+- Policy is updated using this normalized advantage.
+
+<Note>
+Both methods can be extended with reward shaping, entropy bonus, or trust-region clipping as in PPO if needed.
+</Note>

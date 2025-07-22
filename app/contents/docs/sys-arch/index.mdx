@@ -1,0 +1,89 @@
+---
+title: System Architecture
+description: High-level system components and their interactions for both implementations.
+---
+
+# System Architecture
+
+## Absolute Zero Reasoner (AZR)
+
+AZR consists of:
+- **Proposer LLM**: generates new code reasoning tasks using buffers and few-shot exemplars  
+- **Verifier (code executor env)**: runs and checks task validity, determinism, and safety  
+- **Solver LLM**: attempts to solve proposed tasks, receiving binary correctness reward  
+- **Task Buffers**: for deduction, abduction, and induction examples  
+- **RL Engine (TRR++)**: computes multitask advantage, runs policy updates  
+
+
+
+------------------------------------------------------------
+**Workflow Diagram: Absolute Zero Self-Play Loop**
+------------------------------------------------------------
+
++----------------------------------------+ \
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Task&nbsp;Buffers \
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;D_abduction&nbsp;|&nbsp;D_deduction&nbsp;|&nbsp;D_induction&nbsp;|
++----------------------------------------+ \
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;v 
+
+Proposer&nbsp;LLM &nbsp;&nbsp; (generate&nbsp;tasks)&nbsp;
+
+ |  Code Verifier   |
+| (Python exec, etc)|
+
+
+(if valid)    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;     [ (invalid)->(Discard) ]
+
+Next step only if valid
+
+
++------------------+
+|   Add to Buffer    |
+|  (update task store) |
++------------------+
+
++------------------+
+|    Solver LLM    |
+|  (attempt solve) |
++------------------+
+
++------------------+
+|    RL Update     |
+|     (TRR++)      |
++------------------+
+
+------------------------------------------------------------ 
+------------------------------------------------------------
+
+
+
+## Elastic Reasoning
+
+Components:
+- **Input Handler** (prompt + budget config)
+- **Reasoner LLM** (budgeted rollout in two phases: thinking and solution)
+- **RL Trainer (GRPO)** with budget-constrained rollouts  
+- **Evaluation scripts** for Pass@1, token usage  
+- **Hydra-based configuration** and checkpoint management
+
+**Data Flow:**
+
+Input Prompt
+|
+v
++----------+
+| LLM | (budgeted rollout)
++----+-----+
+|
+v
++------------------+
+| Eval & Logging |
++------------------+
+
+
+All code and configs are modular, using Hydra for reproducibility.  
+For full architectural diagrams, see the diagrams page (with SVGs).
+
+<Note type="info">
+Separate budgeting is enforced at every execution step in Elastic Reasoning; in AZR, the core LLM model multiplexes propose/solve roles.
+</Note>

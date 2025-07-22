@@ -1,0 +1,36 @@
+---
+title: Human Comparison & Key Findings Summary
+description: Comparison of models vs. human benchmarks and summary of high-level findings.
+---
+
+# Human Comparison & Key Findings Summary
+
+## 1. Human Baselines and Gaps
+
+- **Math/Coding Benchmarks:**
+  - SOTA human submissions for AIME, Olympiad, LiveCodeBench: 99-100% for coding test cases, variable for hard math proofs.
+  - E1-Math-1.5B and AZR-7B models reach ~70-75% (coding) and 35-45% (math) Pass@1—remarkable for zero data/self-play settings.
+- **Solution Quality:**
+  - Both methods occasionally generate “shortcuts” or concise proofs not present in typical human traces, sometimes surpassing simple baselines in brevity.
+- **Error Patterns:**
+  - Unlike humans, models nearly always output well-formatted code; rare “creative” solutions appear (more so in math with AZR).
+
+## 2. Key Insights
+
+- **Budget-aware inference improves both efficiency and overall accuracy:**  
+  Separate budgeting (ER) yields shorter, more accurate solutions even with fewer tokens than unconstrained models.
+- **Self-proposed tasks unlock broader generalization:**  
+  AZR-style constant self-play enables deep overfitting resistance; models trained on coding propose novel math problems that transfer skill (+10-15 points).
+- **Larger models = better reasoning scaling:**  
+  Pass@1 and generalization improve log-linearly with model size, mirroring language- and code-model scaling laws.
+
+## 3. Takeaways
+
+- **Deployment-ready:**  
+  Elastic reasoning can be deployed under fixed budget/latency with minimal retraining; AZR scales to new domains and sizes seamlessly.
+- **Self-improving reasoning is practical:**  
+  Open-ended RLVR and self-play produce robust, scalable reasoning systems, outperforming even strong RLVR baselines that rely on millions of labeled QA pairs.
+
+<Note title="Future Directions">
+Future work includes (1) multi-modality, (2) dynamic buffer management, and (3) safe reward shaping for real-world applications.
+</Note>

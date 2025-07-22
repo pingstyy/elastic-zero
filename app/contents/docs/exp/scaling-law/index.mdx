@@ -1,0 +1,72 @@
+---
+title: Scaling Laws and Generalization Tests
+description: Technical analysis of scaling behaviors, generalization, and open challenges from Elastic Reasoning and Absolute Zero.
+---
+
+# Scaling Laws and Generalization Tests
+
+Understanding how large reasoning models behave as model and compute scales — and under true out-of-distribution evaluation — is key to high-impact generalization, reliability, and deployment. Here we analyze the *scaling laws* and *generalization* insights emergent from Elastic Reasoning [1] and Absolute Zero [2].
+
+## 1. Scaling Laws in Elastic Reasoning
+
+- **Log-linear Performance Scaling:** As reported in [1], solution accuracy **(Pass@1)** improves approximately linearly with the **logarithm** of the number of allowed reasoning tokens (“test-time compute”):
+
+```
+ Accuracy ≈ a · log(tokens) + b
+```
+
+  Empirically,
+  - **Diminishing returns:** Each additional doubling of the budget yields smaller net gain, but total accuracy saturates slowly (see Fig. 4 in [1]).
+  - **Budget flexibility:** Models trained with a single (t*,s*) generalize to arbitrary test-time pairs (t, s), enabling on-the-fly resource allocation.
+
+- **Model Size Scaling:** Larger models (DeepScaleR-1.5B, DeepCoder-14B) show higher accuracy at all compute levels (Table 1, [1]). Performance improves log-linearly with parameter count, matching earlier findings in LLM scaling studies.
+
+## 2. Scaling, Emergence, and Transfer in Absolute Zero
+
+- **Scaling in Base Model:**  
+  - AZR-3B: +5.7 points (overall),  
+  - AZR-7B: +10.2
+  - AZR-14B: +13.2  
+  (see Table, p. 23 in [2])
+- **Cross-domain Transfer:**  
+  Training AZR exclusively on code induces **much higher math scores** than code-supervised RLVR (gains of up to +15.2). Skill transfer from coding to math is much stronger than between base RLVR models.
+- **Emergence:**  
+  With larger models and more self-generated data, step-by-step intermediate plans and ReAct-style comment+code structure emerge. Token lengths (especially in abduction) increase further with scale, reflecting more complex search.
+
+--------------------------------------------------------
+| Model              | Code Avg | Math Avg | Total Avg |
+|--------------------|----------|----------|-----------|
+| Qwen2.5-3B + AZR   | 54.9     | 26.5     | 40.7      |
+| Qwen2.5-7B + AZR   | 61.6     | 39.1     | 50.4      |
+| Qwen2.5-14B + AZR  | 63.6     | 43.0     | 53.3      |
+--------------------------------------------------------
+--------------------------------------------------------
+
+
+## 3. Generalization Tests
+
+- **Unseen Problem Distributions:**
+  - Both methods (ER/AZR) *trained only on in-domain tasks* generalize robustly to OOD math/code reasoning (AIME, OlympiadBench, HumanEval+, MBPP+).
+  - Absolute Zero achieves OOD performance gains with zero human data, illustrating the power of open-ended task self-play.
+- **Ablations:**
+  - Omitting task modes (induction, abduction) in AZR reduces math accuracy by >5 pts.
+  - Disabling dynamic reference prompts lowers performance, especially on harder math/code splits ([2], Table 2).
+  - In ER, ablations reveal the **solution segment** gains most from budget-constrained training; conciseness and pass@1 both rise when the solution is not truncated.
+
+## 4. Open Challenges
+
+- **Safety:**  
+  Free-form self-play can yield unexpected or unsafe behaviors (“uh-oh moments” in Llama3.1-8B).
+- **Beyond code/math:**  
+  Does scaling and transfer hold for complex dialog, retrieval, multimodal synthesis?
+- **Exploration:**  
+  How to balance task novelty and reliability in self-curriculum generation as models scale?
+
+<Note>
+Further quantitative details (figures, ablation metrics, and task-wise plots) are available in main and appendix sections of [1,2].
+</Note>
+
+---
+**References**
+- [1] Xu, Y. et al. (2025). Scalable Chain-of-Thoughts via Elastic Reasoning (arXiv:2505.05315v2).
+- [2] Zhao, A. et al. (2025). Absolute Zero: Reinforced Self-play Reasoning with Zero Data (arXiv:2505.03335v2).

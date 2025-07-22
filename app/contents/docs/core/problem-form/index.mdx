@@ -1,0 +1,64 @@
+---
+title: Problem Formulation
+description: Formal task and learning objective formulation for Absolute Zero and Elastic Reasoning.
+---
+
+# Problem Formulation
+
+## Elastic Reasoning
+
+In **Elastic Reasoning**, a large reasoning model (LRM) is tasked with generating Chain-of-Thought (CoT) trajectories under a strict inference budget `c`. The output `y` is structured as:
+```
+y = (y_think, y_solution)
+
+Where:
+
+- |y_think| <= t — *thinking phase*
+- |y_solution| <= s — *solution phase*
+- c = t + s — *total budget*
+
+**Objective:**  
+Maximize output quality under any division of `(t, s)`, ensuring complete solution generation and adaptive reasoning.
+
+Formally, the expected reward is defined as:
+
+J(theta) = E_{x, y ~ pi_theta(. | x; t, s)} [ r(y) ]
+
+Where `r(y)` is task-specific (e.g., Pass@1 or code execution correctness).
+
+---
+
+## Absolute Zero
+
+The **Absolute Zero** paradigm removes all human data from the loop. The learning model must:
+
+- Propose challenging-but-solvable code reasoning tasks `tau`
+- Learn to solve them `(x, y*)`, using a code executor as a verifiable reward source
+
+**Self-play Objective:**
+
+J(theta) = max_theta E_{z ~ p(z)}
+  E_{(x, y*) ~ f_e(. | tau), tau ~ pi_theta^propose(. | z)} 
+  [
+    r_propose(tau, pi_theta)
+    +
+    lambda * E_{y ~ pi_theta^solve(. | x)} r_solve(y, y*)
+  ]
+
+Where:
+
+- `tau`: Universal task proposal (function, input, output)
+- `f_e`: Environment validator (code execution, safety, determinism)
+- `r_propose`, `r_solve`: Learnability and correctness rewards
+- `lambda`: Trade-off between proposing and solving
+
+**Task Types:**
+
+- **Deduction:** p, i → o
+- **Abduction:** p, o → i
+- **Induction:** {(i_n, o_n)}, m → p
+```
+
+<Note>
+For details on reward construction, safe code validation, and multitask RL advantage, see Methodology & Evaluation pages.
+</Note>

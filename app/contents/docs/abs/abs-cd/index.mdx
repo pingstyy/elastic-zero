@@ -1,0 +1,69 @@
+---
+title: Code Walkthrough
+description: Annotated walkthrough of the core Absolute Zero selfplay RL loop
+---
+
+# Absolute Zero Annotated Implementation
+
+This self-contained pseudocode and code sketch outlines the main loop for Absolute Zero Reasoner (AZR),
+using a single LLM as both proposer and solver, along with task buffers and code execution as the environment.
+
+```python
+deduction_buffer, abduction_buffer, induction_buffer = init_seed_buffers(base_model)
+
+for step in range(num_steps):
+
+    for _ in range(batch_size):
+        # 1. Sample task type (role): 'deduction', 'abduction', or 'induction'
+        role = sample_task_type()
+
+        if role in {"deduction", "abduction"}:
+
+            examples = buffer_sample(role, K)
+            prompt = build_prompt(role, examples)
+
+            # Generate program (p) and input (i) from model
+            p, i = model.generate(prompt)
+
+            # Validate output
+            try:
+                o = safe_python_exec(p, i)
+                if role == "deduction":
+                    deduction_buffer.append((p, i, o))
+                else:  # role == "abduction"
+                    abduction_buffer.append((p, i, o))
+            except Exception:
+                continue  # Ignore and skip invalid generations
+
+        elif role == "induction":
+            # Custom program sampling for induction reasoning
+            p = sample_program()
+            in_set, out_set = sample_io_pairs(p)
+
+            if validate_all(in_set, out_set):
+                # msg can be a reason or message extracted by the model
+                msg = "Validated IO mapping"  # Placeholder
+                induction_buffer.append((p, list(zip(in_set, out_set)), msg))
+
+    # SOLVE PHASE
+    for task in sample_tasks(batch_size):
+        x, y_star = task["prompt"], task["gold"]
+        y_pred = model.solve(x)
+
+        # Compute reward (e.g., accuracy, execution score)
+        r = reward_fn(y_pred, y_star)
+
+        # Log reward for RL update
+        reward_log.append((x, y_pred, y_star, r))
+
+    # TRR+ , RL Update Phase
+    policy.update_from_rewards(reward_log, mode="per-task-role-type")
+
+```
+
+<Note title="About this Code" type="danger">
+  {" "}
+  This pseudocode abstracts away implementation details like tokenization, prompt
+  templating, and in-context formatting. It is intended to clarify the high-level
+  control flow of Absolute Zero’s self-play loop and reward-based updates.{" "}
+</Note>

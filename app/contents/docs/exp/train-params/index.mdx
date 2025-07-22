@@ -1,0 +1,38 @@
+---
+title: Training Parameters
+description: All key hyperparameters and trainer configs.
+---
+
+# Training Parameters
+
+## Common Hyperparameters
+- **Batch size:** 128 (Elastic), 64 per role (Absolute Zero)
+- **Learning rate:** \(times10^{-6}\)
+- **RL steps:** 200 (Elastic math), 30–200 (Elastic code), ~1k (AZR)
+- **Buffer size:** dynamically grows (AZR), static (Elastic RL)
+- **Thinking/Solution Budgets \(t, s\):** typically 1k tokens each (Elastic Reasoning)
+
+## Example Hydra Config (Elastic):
+**Training :**
+- lr: 1e-6 , 2e-5
+- batch_size: 4 , 8, 16
+- gradient_accumulation: 24, 8, 4
+- budgets:              
+    - thinking: 1000    , &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 1500 , &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;500
+    - solution: 1000    , &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 500 , &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 1500
+    - max_steps: 200
+
+
+## Key Parameter Tuning
+____________________________________________________
+| Name           | Values (Elastic) | Values (AZR) |
+|----------------|------------------|--------------|
+| Budget t, s    | 1000–3000        | n/a          |
+| Buffer K       | n/a              | 4, 8         |
+| Induction N    | n/a              | 4–8          |
+| RL baseline    | GRPO             | TRR++        |
+____________________________________________________
+
+<Note title="Best Practice" type="note">
+Tune budgets for your compute; AZR buffer sizes adapt automatically as new triplets pass code validation.
+</Note>

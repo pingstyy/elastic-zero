@@ -1,0 +1,64 @@
+---
+title: Elastic Reasoning [ Experimental Analysis ]
+description: Results and analysis for Elastic Reasoning experiments.
+---
+
+# Elastic Reasoning: Results & Experimental Analysis
+
+## Main Benchmarks and Findings
+
+**Benchmarks:** AIME2024, AMC, OlympiadBench (math); LiveCodeBench, Codeforces, HumanEval+ (code)
+
+**Highlights:**
+- E1-Math-1.5B achieves **35.0% accuracy** on AIME2024, outperforming L1-Max (27.1%) and S1 (24.2%).
+- Achieves same performance as unconstrained L1-Max (1796 tokens) with only **1619 tokens/question** (32% reduction).
+- Generalizes to new budgets at inference without retraining.
+
+## Scaling and Token Efficiency
+
+Performance scales **log-linearly** with allowed reasoning tokens. Excess tokens mainly add to the "thinking" phase, not "solution" (see Figure 7 in [1]).
+
+| Model         | AIME24 | AMC  | Olympiad | MATH | Minerva | LiveCodeBench | Codeforces | HumanEval+ |
+|---------------|--------|------|----------|------|---------|----------------|------------|------------|
+| S1            | 24.2   | 60   | 40       | 79.9 | 22      | -              | -          | -          |
+| L1 Max        | 27.1   | 70   | 41       | 83.6 | 28      | -              | -          | -          |
+| **E1-Math-1.5B** | **35.0** | **67.7** | **43.6** | **83.6** | **30** | **58.4**        | **1987**    | **91.4**     |
+
+## Training Efficiency
+
+- Requires just **200 RL steps** on math (vs. 820 for L1-Max).
+- Once trained with (t=1k, s=1k), can operate robustly under budgets from 512 to 4K+ tokens.
+
+## Ablation Results
+
+- **Solution phase improvement is decisive.** Trained models generate higher-quality solutions, even with incomplete reasoning (see Table 2 in [1]).
+- Token distribution: For fixed solution budget, reducing thinking budget shifts token allocation but precision for answers remains stable.
+
+## Figures & Visualizations
+
+![Pass@1 Accuracy across Budgets (AIME, AMC, Olympiad, Minerva)](data:image/svg+xml;base64,[placeholder])
+
+![Token Allocation Histogram (AIME/LiveCodeBench)](data:image/svg+xml;base64,[placeholder])
+
+## Observations
+
+- Budget-constrained rollout *encourages concise reasoning*; token usage drops >30% even without test budget.
+- Training with (1k, 1k) budgets leads to strong generalization.
+
+## Limitations
+
+- Segmentation into separately budgeted phases may not suit highly interleaved reasoning/answer tasks (e.g., QA or dialogue).
+- Focused on math and code; application to tasks like multi-hop QA or retrieval left for future work.
+
+> **Note:**  
+> For detailed hyperparameters and further ablations, refer to the Appendix of [1].
+
+---
+
+
+
+<Note type="info">
+For detailed hyperparameters and further ablations, refer to the Appendix of [1].
+</Note>
+
+\[*1] Xu et al. *"Scalable Chain-of-Thoughts via Elastic Reasoning"*, [arXiv:2505.05315v2](https://arxiv.org/abs/2505.05315)

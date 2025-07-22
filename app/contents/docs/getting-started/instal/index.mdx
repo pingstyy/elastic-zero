@@ -1,0 +1,152 @@
+---
+title: Installation & Setup
+description: Install all dependencies using Poetry, uv, or venv for flexible, modern, and reproducible ML research.
+---
+
+Follow these steps to set up and run the project efficiently.
+
+---
+
+## 🧰 Prerequisites
+
+Ensure you have **Python 3.10+** installed. We recommend using **Python 3.12** for maximum compatibility.
+
+Clone the repository:
+
+```bash
+git clone https://github.com/your-org/repo-name.git
+cd repo-name
+```
+
+### Create and activate virtual environment _**macOS**_ & _Linux_
+```
+python -m venv .venv
+source .venv/bin/activate 
+````
+
+### On Windows:
+```
+python -m venv .venv
+source .venv\Scripts\activate
+````
+
+---
+
+### 2. Installing Dependencies
+
+You can install using **Poetry**, **uv**, **pip**, or from `setup.py`.
+
+#### Option A: Using Poetry
+
+```bash
+# If poetry is not installed
+pip install poetry
+
+# Install dependencies
+poetry install
+```
+
+> ✅ **Note:** Poetry handles both dependencies and virtualenv management. If you use Poetry's built-in venv, skip manual `.venv` creation.
+
+#### Option B: Using uv (fast pip-compatible installer)
+
+```bash
+pip install uv
+uv pip install -r requirements.txt
+```
+
+#### Option C: Using pip (classic)
+
+```bash
+pip install -r requirements.txt
+```
+
+#### Option D: Using setup.py
+
+```bash
+pip install .
+# or, for development mode
+pip install -e .
+```
+
+---
+
+### 3. Running the Project
+
+Run the main entry point using one of the following:
+
+#### With Poetry
+
+```bash
+poetry run python run.py
+```
+
+#### With uv (same as pip)
+
+```bash
+uv python run.py
+```
+
+#### Directly (if in .venv)
+
+```bash
+python run.py
+```
+
+---
+
+---
+
+## 🧑‍💻 Supported ML Packages
+
+| Package         | Core purpose                                  |
+| --------------- | --------------------------------------------- |
+| unsloth         | Fast LLM fine-tuning, 8-bit/training support  |
+| bitsandbytes    | QLoRA, quantization, memory reduction         |
+| xformers        | Efficient attention ops                       |
+| triton          | Custom ops, high-performance kernels          |
+| peft            | Parameter-efficient finetuning                |
+| transformers    | Model loading, tokenizers                     |
+| trl (from Git)  | RLHF, RL algorithms (GRPO, TRR++)             |
+| wandb           | Training logging                              |
+| neptune.ai      | Prompt registry, experiment management        |
+| hydra-core      | Config-driven YAML experiment management      |
+| python-dotenv   | API-key/env management                        |
+
+---
+
+## 🔑 Configuration and Credentials
+
+- Hybrid config via **Hydra** using YAMLs in `configs/{env,dev,train,data}`.
+- API keys/Secrets in `.env`, loaded automatically via `python-dotenv`.
+
+<Files
+  items={[
+    {type:'folder', name:'configs', children:[
+      {type:'file', name:'env.yaml'},
+      {type:'file', name:'train.yaml'},
+      {type:'file', name:'data.yaml'},
+    ]},
+    {type:'file', name:'.env'}
+  ]}
+/>
+
+---
+
+
+
+
+
+
+
+
+
+<Note title="Troubleshooting">
+```Python
+  If you encounter installation errors, 
+  ensure your Python version matches the required version (3.10+),
+  and that your virtual environment is activated.
+```
+</Note>
+
+---

@@ -1,0 +1,41 @@
+---
+title: Layer-wise Analysis
+description: Layer and feature attribution analysis in reasoning model architectures.
+---
+
+# Layer-wise Analysis
+
+Layer-by-layer analysis reveals how large reasoning models (LRMs) represent and process chain-of-thought reasoning under strong supervision, RL, and self-play.
+
+## 1. Elastic Reasoning: Fine-grained Attention
+
+- **Earlier Layers**:  
+  Primarily responsible for handling syntax, question understanding, and capturing task format. Ablation of input/early-residuals mainly reduces overall fluency, little effect on solution accuracy.
+- **Mid Layers**:  
+  Represent intermediate reasoning; attention heads focus on `<think>`-enclosed segments. Pruning these layers in E1-Math-1.5B reduces accuracy in math more than in code.
+- **Later Layers**:  
+  Strongly responsible for solution synthesis. Attention patterns are sharpest over tokens following `</think>`. Removing final heads drastically degrades Pass@1.
+
+## 2. Absolute Zero: Multi-role Representations
+
+- **Role Tokenization**:  
+  Tasks and answers are segmented not just by format, but by token type; “propose”/“solve” are learned as operation modes in prompt context.
+- **Ablation Studies**:  
+  Removing in-context reference tokens reduces both proposer diversity and solver accuracy; buffer composition (early/fresh triplets) influences layer specialization.
+- **Emergent Feature Patterns**:  
+  In abduction/induction, deeper layers integrate memory of previous solution failures/successes, enabling trial-and-error planning.
+
+## 3. Feature Attribution
+
+Saliency and logit attribution (Integrated Gradients, SHAP):
+- For both models, most critical paths are in solution segment (`</think>` onwards).
+- **Absolute Zero**: core features often spread across context, with buffer examples and message prompt jointly attended during induction.
+
+<Note>
+Quantification by *head ablation* and attribution methods as per [1], [2], and DeepSeek-RL.
+</Note>
+
+---
+**References**
+- [1] Xu, Y. et al. (2025). Scalable Chain-of-Thoughts via Elastic Reasoning (arXiv:2505.05315v2).
+- [2] Zhao, A. et al. (2025). Absolute Zero: Reinforced Self-play Reasoning with Zero Data (arXiv:2505.03335v2).

@@ -1,0 +1,57 @@
+---
+title: Absolute Zero [paper Summary]
+description: Deep technical summary of Absolute Zero, RL Self-play Reasoning with Zero-Data.
+---
+
+# Absolute Zero: Technical Summary
+
+> “A single LLM can self-evolve via RL by proposing and solving *its own tasks*—no human data or gold questions required.” — Zhao et al. (2025)
+
+## Motivation & Challenge
+
+- Zero-shot reinforcement learning with verifiable reasoning (RLVR) still struggles with data scarcity. Most current methods depend on tens of thousands of human-written questions and answers.
+- To achieve open-ended or superhuman reasoning, models must be able to improve their own task generation—without being limited by human-created data.
+
+## Paradigm
+
+Absolute Zero removes the need for any external data. One model plays both the role of task proposer and task solver, using a code executor as the environment to verify results and provide feedback.
+
+### Core Algorithm Outline
+
+- At each training step:
+  1. The model proposes new tasks based on a historical buffer.
+  2. The tasks are checked using a code executor to ensure they are valid (e.g., correct syntax, safe to run).
+  3. The model then attempts to solve the proposed task.
+  4. The task proposer is rewarded for generating tasks that are neither too easy nor too hard; the solver is rewarded for solving tasks correctly.
+  5. The model updates its policy using a method that considers task type and role-based baselines to improve learning efficiency.
+
+### Self-Play Objective
+
+The goal is to train a model that improves by generating and solving its own tasks, maximizing both the quality of tasks and the correctness of answers.
+
+## Modes of Reasoning
+
+- **Deduction**: Predicting the output of a program given the program and its input.
+- **Abduction**: Figuring out the input that could lead to a given output, using the program.
+- **Induction**: Creating a program based on a few examples of inputs and outputs, aiming to generalize.
+
+## Performance
+
+- The AZR-7B model, trained with no human data, outperforms models that were trained using large amounts of expert-written examples.
+- It shows particularly strong performance when transferred to new domains—training on code leads to over 10 points of improvement on unrelated math tasks. Larger models benefit even more.
+
+| Model Input      | Code Avg | Math Avg | Total Avg |
+|------------------|----------|----------|-----------|
+| Qwen2.5-7B Base  | 56.6     | 23.9     |   40.2    |
+| AZR-7B (Ours)    | 61.6     | 39.1     |   50.4    |
+
+## Implementation Notes
+
+Maintaining buffers, verification steps, and baselines for each task and model role are essential for stable training and reducing variance in results.
+
+> **Note:** See full implementation, code, and logs for further analysis or to replicate the experiments.
+
+
+<Note type="info">
+See full implementation, code, and logs for further analysis or to replicate the experiments.
+</Note>

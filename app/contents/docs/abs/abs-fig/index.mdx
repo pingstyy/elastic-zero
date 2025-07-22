@@ -1,0 +1,40 @@
+---
+title: Absolute Zero — Figures & Visualizations
+description: Key illustrations from the Absolute Zero paper.
+---
+
+# Absolute Zero: Figures, Examples, Visualizations
+
+## Figure 1: AZR achieves SOTA with zero data
+
+<img width="640" alt="AZR SOTA Comparison" src="data:image/svg+xml;base64,[placeholder-for-paper-figure-1]"/>
+<i>AZR beats all prior zero-setting RLVR models, including those with tens of thousands of curated problems.</i>
+
+## Figure 4: Complete Training Loop
+
+<img width="680" alt="AZR Overview" src="data:image/svg+xml;base64,[placeholder-for-paper-figure-4]"/>
+<small>Proposing, filtering, curriculum in buffers, then solving, then update.</small>
+
+## Example: Model-generated Abduction (from Paper)
+&forall
+
+
+> “Given code, output, find input.”  
+> Model hypothesizes, reasons, corrects itself, and halts when code output matches requirement (per agent reasoning transcript in Figure 7).
+
+## Scaling/Fine-tuning Table
+
+| Model                   | Code Avg | Math Avg | Combo Avg |
+|-------------------------|----------|----------|-----------|
+| Qwen2.5-3B + AZR        | 54.9     | 26.5     | 40.7      |
+| Qwen2.5-7B + AZR        | 61.6     | 39.1     | 50.4      |
+| Qwen2.5-14B + AZR       | 63.6     | 43.0     | 53.3      |
+
+## Cognitive behaviors
+
+- Intermediate planning comments appear in code solutions.
+- Reasoning steps lengthen most for abduction training—shows genuine “search” via trial-and-error.
+
+<Note type="tip">
+See Appendix for raw trajectories and “vibe check” analyses.
+</Note>

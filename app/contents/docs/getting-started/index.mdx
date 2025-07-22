@@ -1,0 +1,107 @@
+---
+title: Getting Started
+description: Step-by-step instructions and project documentation for Absolute Zero & Elastic Reasoning implementations.
+---
+
+Welcome! This documentation details the end-to-end workflow for implementations of two state-of-the-art reasoning ML frameworks: **Absolute Zero** and **Elastic Reasoning (Scalable CoT via Elastic Reasoning)**.
+
+---
+
+## 🧠 Project Motivation
+
+Recent advances in reasoning-optimized LLMs (see *Absolute Zero*, *Elastic Reasoning*) set a new SOTA for budget-aware chain-of-thought and zero-data bootstrapped RLVR. This project reproduces, evaluates, and extends these paradigms for scalable and robust ML deployments.
+
+---
+
+## 🔁 Absolute Zero
+
+### 📘 Overview
+
+Absolute Zero initiates from nothing but a seed model and develops task-agnostic buffers that evolve through *RL-driven curriculum construction*.
+
+---
+
+### 🔁 Algorithm (Pseudocode)
+
+```python
+for t in range(T):
+    # PROPOSE phase
+    for task_type in ["deduction", "abduction", "induction"]:
+        refs = sample_K_from_buffer(task_type)
+        proposal = model.propose(task_type, refs)
+        if validate(proposal):
+            buffer[task_type].append(proposal)
+    
+    # SOLVE phase
+    for task in sample_batch_from_buffers(B):
+        solution = model.solve(task)
+        reward = compute_reward(solution, task)
+        update_model_rl(reward, baseline="per task-role")
+```
+
+---
+
+### 🧠 Key Differences (Absolute Zero vs. Traditional “Zero Setting”)
+
+| Property            | Zero Setting                    | **Absolute Zero**                            |
+| ------------------- | ------------------------------- | -------------------------------------------- |
+| Data Dependency     | Curated QA pairs (no rationale) | **No data of any kind**                      |
+| Learning Type       | Supervised prompt tuning        | **Reinforced self-play**                     |
+| Curriculum Building | Static                          | **Emergent, from multi-role buffers**        |
+| Roles Involved      | Answer-only                     | **Deduction, Abduction, Induction**          |
+| Use Case            | Benchmark QA                    | **Generalized self-learned reasoning tasks** |
+
+<Note title="Implementation Details">
+For buffer initialization, validation filters, and multitask role-specific updates, see the **Appendix Algorithm 1** and Section 3 of the paper.
+</Note>
+
+---
+
+### 📎 References
+
+1. Zhao et al., *"Absolute Zero: Reinforced Self-Play Reasoning with Zero Data"*, [arXiv:2505.03335v2](https://arxiv.org/abs/2505.03335)
+
+---
+
+## 🧠 Elastic Reasoning
+
+> *Elastic Reasoning: Efficient and Scalable CoT via Budget-Aware Prompt Construction*
+
+---
+
+### 🔁 Core Idea
+
+Elastic Reasoning introduces dynamic reasoning templates that adapt to token budgets and model performance. By stretching or compressing prompt examples, it balances reasoning quality with efficiency.
+
+---
+
+### 📌 Components
+
+* **CoT Sampler**: Retrieves examples from a reasoning bank.
+* **Budget-Aware Constructor**: Fills prompt up to the max budget with diverse roles (e.g., explanation, critique).
+* **Dynamic Pruning**: Drops non-critical context as budgets shrink.
+
+---
+
+### 💡 Comparison Table
+
+| Feature        | Traditional CoT          | **Elastic Reasoning**             |
+| -------------- | ------------------------ | --------------------------------- |
+| Prompt Length  | Fixed or greedy          | **Elastic, budget-aware**         |
+| Role Diversity | Single task (e.g. solve) | **Multi-role: reflect, critique** |
+| Scalability    | Poor for small budgets   | **Adaptable to any budget**       |
+| Efficiency     | O(n) task construction   | **Optimized sampling & reuse**    |
+
+---
+
+### 📎 References
+
+2. Park et al., *"Elastic Reasoning: Scalable Chain-of-Thought Prompting for LLMs"*, [arXiv:2505.04021](https://arxiv.org/abs/2505.04021)
+
+---
+
+## ✅ Next Steps
+
+* Dive deeper into algorithms: [Absolute Zero →](#absolute-zero)
+* Explore scalable CoT: [Elastic Reasoning →](#elastic-reasoning)
+* Check [Appendix →](#) for advanced configs and benchmarking protocols

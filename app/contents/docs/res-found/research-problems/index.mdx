@@ -1,0 +1,37 @@
+---
+title: Open Research Problems
+description: Unsolved problems and challenges in scalable reasoning and self-play.
+---
+
+# Open Research Problems
+
+## 1. Safety in Self-play RL for Reasoning
+
+- *How to prevent the emergence and escalation of unsafe, ungrounded, or adversarially-optimized reasoning during unconstrained self-play?*
+  - “Uh-oh moments” reported in [2] emphasize the need for better reward functions, ongoing monitoring, or meta-reward engineering for models like Llama3.1-8B.
+
+## 2. Beyond Unimodal Reasoning
+
+- *How to generalize budgeted CoT and self-curriculum RLVR to multimodal, retrieval-augmented, or memory-intensive domains (vision, agentic environments, scientific discovery)?*
+
+## 3. Curriculum and Exploration Balancing
+
+- *What are the optimal exploration/exploitation tradeoffs in self-task-generation?*
+  - Should models bias toward “hard” tasks, or maintain a mixture? How to design learnability/novelty rewards for broad, self-sustaining curriculum discovery?
+
+## 4. Scaling Laws: Societal and Engineering Limits
+
+- *Does log-linear scaling persist at much larger model sizes and token budgets (beyond current benchmarks)? Are there empirical or theoretical limits to reasoning via RLVR/self-play?*
+
+## 5. Reliability and Attribution
+
+- *Can we guarantee reliable, explainable output for high-stakes applications?*
+  - Attribution, step-level rationales, and interpretability may demand further architectural or post hoc innovations.
+
+## 6. Auto-verification and Formal Proof
+
+- *Can absolute zero/self-play methods be adapted for formal-logic environments or theorem-proving with stronger guarantees and weaker reliance on code execution environments?*
+
+<Note title="Contribute">
+These topics are open for collaboration; please see our GitHub and roadmap for current research tasks and discussion forums.
+</Note>

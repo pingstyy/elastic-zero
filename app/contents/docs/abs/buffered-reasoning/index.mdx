@@ -1,0 +1,64 @@
+---
+title: Buffered Reasoning Pipeline
+description: Deductive abductive and inductive reasoning via self training buffers and reinforcement learning
+---
+
+```
+
+Buffered reasoning is a hybrid method combining prompt-based program generation with self-improving reward loops. The training logic revolves around the continual sampling and growing of task-specific buffers to improve solver generalization and proposal quality over time.
+
+## 🧠 Core Design
+
+The pipeline is divided into two primary phases:
+
+### 1. **Propose Phase**
+- Sample a task type: `"deduction"`, `"abduction"`, or `"induction"`.
+- Retrieve K examples from the corresponding buffer.
+- Use these examples to build a **few-shot prompt**.
+- Model generates `(program, input)` tuples.
+- Executed and validated; if valid, they are added back to the buffer.
+
+### 2. **Solve Phase**
+- Sample held-out tasks from evaluation set.
+- Use current model to generate predicted outputs `y_pred`.
+- Compare against ground-truth `y_star`.
+- Calculate rewards for policy gradient updates (TRR++ baseline).
+
+## 🚦 Execution & Safety
+
+<Note type="warning" title="Execution Control">
+All code execution is whitelisted — no untrusted system, OS, or file-level imports are allowed. Only standard, safe Python subsets are enabled.
+</Note>
+
+- Programs are **syntax-checked**, and **blacklisted imports** like `os`, `sys`, and `socket` are stripped before execution.
+- I/O validation ensures deterministic, reproducible behaviors across model checkpoints.
+
+## 🧾 Critical Implementation Notes
+
+- ✅ **Buffers Grow Forever**: Buffers do not reset. This promotes a growing curriculum and encourages exploration of harder, long-tail examples.
+- 🎯 **Role-specific Buffers**: Separate `deduction_buffer`, `abduction_buffer`, and `induction_buffer` promote structural diversity in reasoning patterns.
+- 🧮 **Z-score Baseline for RL**: 
+  - Each task-type maintains a **mean & stddev** reward to normalize new updates.
+  - Refer to **Section 3.3.5, Eq (8)** in the paper for the baseline formula:
+
+```math
+A = \frac{r - \mu_{\text{task,role}}}{\sigma_{\text{task,role}}}
+```
+
+Where `r` is the observed reward, and `μ, σ` are running statistics for that task/role.
+
+- 🧠 **Reward Shaping**:
+  - *Proposer* is rewarded if its generated task is challenging but solvable (*learnable*).
+  - *Solver* is rewarded purely on correctness and generalization ability.
+
+---
+
+## 📦 Learn More
+
+See the full implementation in the [official repo](https://github.com/AbsoluteZeroProject/) or **Appendix C** in the paper for:
+
+- Prompt formatting templates
+- Buffer management code
+- Safety layer and exec guards
+
+```

@@ -1,0 +1,200 @@
+---
+title: Final Project Report: Elastic Reasoning & Absolute Zero Implementation
+description: Comprehensive technical report synthesizing experiments, methodology, results, ablations, and insights for budget-scalable chain-of-thought and data-free LLM reasoning.
+---
+
+# Final Project Report  
+*Elastic Reasoning & Absolute Zero Zero-Data Reasoning: Scalable Post-Training RL for LLMs*
+
+---
+
+## 1. Introduction
+
+Contemporary advances in large language models (LLMs) have unlocked remarkable performance on complex mathematical, programming, and multi-step reasoning tasks. Yet, the most powerful LLMs often suffer from two fundamental bottlenecks:
+
+- **Uncontrolled Chain-of-Thought (CoT) lengths**, leading to unpredictable inference costs, latency, and incomplete or truncated answers in constrained deployments.
+- **Persistent data dependence**: Even "zero"-style RLVR (Reinforcement Learning with Verifiable Rewards) methods require large-scale, expertly curated question/answer sets to drive effective learning and reward feedback.
+
+To address these, we implemented and deeply analyzed two state-of-the-art paradigms: **Elastic Reasoning** ([Xu et al., 2025][1]), which delivers scalable token-efficient CoT via explicit solution segment budgeting, and **Absolute Zero Reasoner (AZR)** ([Zhao et al., 2025][2]), which achieves true data-free curriculum bootstrapping for robust multi-domain reasoning with _no_ external labeled data. This report provides a comprehensive technical narrative of our approach, methodology, experimental results, and insights for both frameworks.
+
+---
+
+## 2. Motivation & Problem Definition
+
+### 2.1. Motivation
+
+- **Inference Budget Constraints:**  
+  Real-world deployments (on edge, cloud, API) require LLMs to produce accurate answers _within specified cost/latency limits_. Prior solutions (e.g., S1, L1[24]) use length truncation or soft RL length targeting, but degrade solution accuracy noticeably once budgets tighten.
+- **Scaling Data-Efficient Reasoning:**  
+  "Zero setting" RLVR advances remove explicit rationales, but _still rely on human-provided questions and gold answers_. For frontier models, curating such data becomes unsustainable, particularly as models approach or surpass human-level reasoning.  
+  *Absolute Zero Reasoner* eliminates this bottleneck: the model proposes, solves, and verifies its own tasks via RL and code execution, aligning with a vision of LLMs that self-improve beyond curated label limitations.
+
+---
+
+## 3. Methodology Overview
+
+### 3.1 Elastic Reasoning (ER)
+
+- **Separate Budgeting**: Each inference allocates token budget \(c = t + s\), split as _thinking_ (\(t\)) and _solution_ (\(s\)).
+- **Budget-constrained RL Training**:  
+    - At train time, model unrolls reasoning up to \(t^*\), forcibly emits `</think>`, then generates solution up to \(s^*\).
+    - RL loss via GRPO with advantage baseline.
+    - Trained with a single budget configuration, model generalizes to arbitrary (t, s) at test time.
+- **Inference**: ER guarantees that _solution_ is never truncated, even if reasoning segment is incomplete.
+
+### 3.2 Absolute Zero Reasoner (AZR)
+
+- **Self-play Loop**: One LLM serves as both proposer (task generator) and solver.
+- **Verifiable Environment**: Python code executor validates all (program, input, output) proposals for determinism, correctness, and safety.
+- **Task Types**:  
+  1. Deduction (predict output given program+input)  
+  2. Abduction (find plausible input for given program+output)  
+  3. Induction (synthesize program from I/O pairs + prompt)
+- **Rewards**:  
+    - Proposer: Learnability (neither too easy nor impossible).
+    - Solver: Binary correctness from code execution.  
+    - Policy optimizes _Task-Relative REINFORCE++_ (per-role, per-task baselines).
+- **Buffer Management**: Growing buffers (deduction/abduction/induction) facilitate curriculum and diversity.
+
+---
+
+## 4. Experimental Design
+
+### 4.1. Training Setup
+
+- **Hardware**: 4xA100 80GB, 2x Llama3.1-8B and DeepScaleR-1.5B, Qwen2.5-7B{,-Coder,-Math}
+- **Software**: PyTorch, transformers, bitsandbytes, trl, unsloth, peft; Config managed via Hydra; logging via wandb, Neptune.
+- **Dataset**:  
+  - **ER**: In-domain math/code benchmarks from LiveCodeBench, AIME, AMC, MATH500, OlympiadBench.
+  - **AZR**: No external task data. All triplets and in-context exemplars generated in the self-play loop.
+- **Evaluation**:  
+  - Test on both in-distribution and _out-of-distribution_ splits (never-seen problems, code → math transfer).
+  - Metrics: Pass@1 accuracy, token usage per answer, code correctness, scaling trends.
+  - Baselines: S1, L1, DeepSeekR1, SimpleRL-Zoo, ORZ, o1, human-level
+
+---
+
+## 5. Results & Analysis
+
+### 5.1. Elastic Reasoning
+
+- **Conciseness and Efficiency**: ER models achieve 32–37% token reduction _without loss in accuracy_ (AIME, LiveCodeBench).
+- **Budget Generalization**:  
+   - Training only with (t*, s*) = (1k, 1k) allows generalization to wider (t, s) values at inference—critical for real-time adaptation.
+- **Performance**:  
+  - E1-Math-1.5B: Pass@1 = 35.0% on AIME24, outperforming L1-Max (27%) using _fewer tokens_.
+  - E1-Code-14B: Codeforces rating 1987 (96% percentile) under tight budget.
+  - ER outperforms truncation (vanilla, S1) and RL length-control baselines especially at constrained budgets.
+- **Ablation**:  
+  - Both _thinking_ and _solution_ segments improve after training, but solution phase gains are most critical for preserved accuracy.
+- **Scaling Law**:  
+  - Pass@1 improves _log-linearly_ with log(tokens), saturates as budgets increase but SOTA is reached more efficiently.
+- **Visualization**:  
+  - See Figure 7/8: token allocation histogram and scaling plots.
+
+### 5.2. Absolute Zero
+
+- **AZR achieves SOTA**:  
+  - Outperforms RLVR zero-setting (with curated data):  
+      - E.g., Code Avg/Math Avg = 61.6/39.1 (AZR-7B-Coder) vs. 56.6/23.9 (Qwen2.5-7B base).
+      - Gains increase with scale: +5.7 (3B), +10.2 (7B), +13.2 (14B).
+- **Cross-Domain Transfer**:  
+  - Running AZR on code alone _improves math OOD transfer_ (+15.2 pt) beyond any code-tuned RLVR.
+- **Emergent Behavior**:  
+  - Models interleave comments with code (natural ReAct planning).
+  - In abduction, token length grows, reflecting iterative trial-and-error search.
+  - Safety: Observed rare, "uh-oh" moments (esp. Llama3.1-8B).
+- **Ablations**:  
+  - Removing task modes (induction or abduction) drops accuracy sharply.
+  - Disabling dynamic reference prompts (buffered in-context) drops math transfer by ~5 pts.
+  - Only training solver (not joint with proposer) reduces overall accuracy by 1.4 points.
+
+---
+
+## 6. Theoretical and Implementation Insights
+
+- **ER's theoretical grounding**:  
+    - By structuring the RL objective to always allocate solution phase tokens _regardless_ of reasoning completeness, the model is robust to truncated inferences; earlier reasoning is packed with critical information.
+- **AZR's proof of "absolute zero"**:  
+    - Self-play RL in code executor environment is sufficient for high-performance out-of-distribution generalization, _without any supervision data_.
+- **Buffer Growth & Curriculum**:  
+    - AZR’s buffer-driven evolution ensures a self-curriculum that automatically adapts to the agent’s capabilities, resembling open-world learning systems.
+- **Implementation Challenges**:  
+    - Program validation required robust detection of determinism, whitelisting, and safety—non-trivial for open code generation models.
+    - Budgeting interface had to be linked to tokenizer internals (for exact t/s cutoff).
+    - RL instability was controlled with role/task-wise baselines (TRR++).
+
+---
+
+## 7. Strengths & Limitations
+
+### 7.1. Strengths
+
+- **Fully open-source, reproducible implementation with strict config and logs**
+- **Scalable to larger models (both ER/AZR) and nearly arbitrary token budgets**
+- **Empirical results reproducible across domains, models, deployments**
+
+### 7.2. Limitations
+
+- **ER's segmentation may not suit interleaved question-answer (e.g., dialogue)**
+- **AZR's self-play loop in open code can still run into rare unsafe outputs**
+- **Both methods still require substantial compute at large model scales**
+- **AZR relies on verifiable _code environment_; extension to other domains (e.g., image reasoning, multimodal, downstream automation) needs further research**
+
+---
+
+## 8. Lessons Learned & Recommendations
+
+- **Budget separation is crucial** for robust deployable reasoning under hard constraints, outperforming both truncation and soft-RL approaches.
+- **Self-play is practical and powerful**: AZR proves that SOTA emerges without a single label or human-written QA pair, provided code executor rewards are available.
+- **Configurable, reproducible pipeline** pays off significantly for both training and ablation; we advocate Hydra/YAML/CLI-based orchestration.
+
+---
+
+## 9. Future Work
+
+- **Scaling up** (Llama3.1-70B, DeepSeekR1-70B)
+- **Integrating formal theorem provers, multimodal supervisors**
+- **Exploring meta-learning and safety-aware reward shaping for unconstrained self-play**
+- **Deploying low-latency, high-accuracy, budget-governed models in real-world ML systems and industry apps**
+
+<Note>
+Community contributions are welcome for new benchmarks, domains, and research problems!
+</Note>
+
+---
+
+## 10. References
+
+1. Xu, Y., Dong, H., Wang, L., Sahoo, D., Li, J., Xiong, C., “Scalable Chain of Thoughts via Elastic Reasoning”, arXiv:2505.05315v2, 2025
+2. Zhao, A., Wu, Y., Yue, Y., Wu, T., Xu, Q., Lin, M., Wang, S., Wu, Q., Zheng, Z., Huang, G., “Absolute Zero: Reinforced Self-play Reasoning with Zero Data”, arXiv:2505.03335v2, 2025  
+... (See the Citations page for the full bibliography.)
+
+---
+
+## Appendix
+
+### Experiments & Code
+
+- All experiments fully logged and reproducible via requirements.txt, wandb, neptune, Hydra configs.
+- Python-based code executor public with validation routines and buffer checkpoints.
+- Hybrid Docker + Hydra + venv/Poetry/uv for rapid onboarding.
+- See the provided model cards and logs for artifact hashes.
+
+### Author Credits
+
+Built by [your lab/team].  
+Original research led by Salesforce AI (Elastic Reasoning) and Tsinghua/BIGAI/PSU (Absolute Zero).  
+Open source software, issue reporting, and pull requests welcomed.
+
+---
+
+## 11. Conclusion
+
+Elastic Reasoning and Absolute Zero demonstrate that SOTA reasoning over code and math is possible _even under tight budget constraints or with no data at all_. Our implementations illustrate the power of rigorous RL-based post-training and buffer-driven self-play, laying the foundation for the next generation of deployable, scalable, and self-improving LLMs. As models scale, reward designs and open-ended curriculum learning will only matter more.
+
+*"Experience" is the new data. The future of reasoning LMs is hands-off, self-improving, and budget-aware.* 
+
+---
+
+_Last updated: 2025-07-22_

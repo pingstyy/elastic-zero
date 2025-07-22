@@ -1,0 +1,69 @@
+---
+title: Absolute Zero — Experimental Analysis
+description: Results, ablation, and analysis of Absolute Zero Reasoner on coding and math benchmarks.
+---
+
+# Absolute Zero: Experiments & Analysis
+
+## Benchmarks
+
+- **Coding:** HumanEval+, MBPP+, LiveCodeBench (2023/05–2025/02)
+- **Math:** AIME’24/25, AMC’23, MATH500, OlympiadBench, Minerva
+
+## Main Results
+
+| Model | #Human Data | Code Avg | Math Avg | Combined Avg |
+|-------|-------------|----------|----------|--------------|
+| Qwen2.5-7B (base) | 0 | 56.6   | 23.9    | 40.2         |
+| ORZ-7B (curated)  | 57k| 80.5   | 41.6    | 48.6         |
+| **AZR-7B (Ours)** | 0 | 61.6   | 39.1    | 50.4         |
+| AZR-7B-Coder      | 0 | 61.6   | 39.1    | 50.4         |
+
+- **AZR-7B achieves new SOTA on combined reasoning benchmarks without any curated data.**
+- **Cross-domain generalization:** AZR-Coder improves math average by +15.2 after code-centric training.
+
+## Scaling Laws
+
+- Performance gain **increases** with model size (Qwen2.5 3B: +5.7, 7B: +10.2, 14B: +13.2).
+- Llama3.1-8B also shows improvements on both in-distribution and OOD tasks.
+
+## Ablation
+
+- Removing **induction** or **abduction** task types drops math performance by >5 pts.
+- Omitting dynamic proposal conditioning (K reference triplets) reduces math by ~5 pts, code by ~1 pt.
+- Only training solver (not proposer) = 1.4-point overall drop.
+
+| Setup               | Code Avg. | Math Avg. | Combined |
+|---------------------|-----------|-----------|----------|
+| Deduction only      | 54.6      | 32.0      | 43.3     |
+| No Induction        | 54.2      | 33.3      | 43.8     |
+| No Gen Reference    | 54.4      | 33.1      | 43.8     |
+| Train Solver Only   | 54.8      | 36.0      | 45.4     |
+| **Full AZR**        | **55.2**  | **38.4**  | **46.8** |
+
+## Emergent Behaviors
+
+- *ReAct-style plans* and comments appear in code solutions (especially induction tasks).
+- Token length increases most during **abduction** training, reflecting genuine trial-and-error search.
+
+## Figures & Examples
+
+![AZR Performance Table](data:image/svg+xml;base64,[placeholder])
+
+*Example Abduction Solution Reasoning (paraphrased from Fig. 7):*
+
+> To find an input for target output, the model analyzes the code, hypothesizes input values, explains its process, iteratively adjusts, and halts when `p(i)` matches output. (Agent even finds a correct input different from “gold”, but reward function considers output equivalence as success.)
+
+## Key Findings
+
+- *AZR can match or exceed curated-data RLVR reasoners on code/math despite only ever seeing self-proposed tasks.*
+- Buffer-based curriculum + robust reward signals = strong, stable improvement.
+
+<Note title="Open Questions">
+How do we scale AZR to multimodal domains? What safety measures are needed for unconstrained self-play?
+</Note>
+
+---
+# References
+
+2. Zhao et al., "Absolute Zero: Reinforced Self-Play Reasoning with Zero Data", arXiv:2505.03335v2

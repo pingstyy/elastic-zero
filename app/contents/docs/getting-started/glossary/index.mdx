@@ -1,0 +1,28 @@
+---
+title: Glossary & Acronym Index
+description: Key technical terms and acronyms for scalable reasoning research.
+---
+
+# Glossary & Acronym Index
+
+| Term            | Definition                                                                                          |
+|-----------------|-----------------------------------------------------------------------------------------------------|
+| **AZR**         | Absolute Zero Reasoner: an LLM trained via fully self-played, code-executed RLVR                    |
+| **CoT**         | Chain-of-Thought: explicit, multi-step reasoning sequences output by LLMs                           |
+| **Deduction**   | Reasoning mode: predicting output from program and input                                            |
+| **Abduction**   | Reasoning mode: inferring input given program and output                                            |
+| **Induction**   | Reasoning mode: synthesizing a program from in-out examples                                        |
+| **RLVR**        | Reinforcement Learning with Verifiable Rewards: RL where rewards are code or logic gated            |
+| **GRPO**        | Generalized REINFORCE Policy Optimization: baseline-reduced policy gradient RL for LM reasoning     |
+| **TRR++**       | Task-Relative REINFORCE++: multi-head, task-role-specific baseline variance reduction used in AZR   |
+| **Zero Setting**| RLVR with *no rationale labels* but still curated QA pairs                                         |
+| **Absolute Zero**| RLVR with *no* annotated QA pairs: data-free self evolution                                       |
+| **E1-Math-1.5B**| Model name: Elastic Reasoning 1.5B for math                                                        |
+| **Pass@1**      | Metric: did model’s first answer pass test (code/math)—primary for code/data/QA RLVR               |
+| **Budget Forcing**| Forcing fixed length or solution with prompt truncation tokens                                    |
+| **S1, L1, O1, R1, DeepSeek** | Competing models or specific RL or fine-tuning strategies in Chain-of-Thought research  |
+
+---
+**References**  
+- [1] Xu, Y. et al. (2025). Scalable Chain-of-Thoughts via Elastic Reasoning (arXiv:2505.05315v2).
+- [2] Zhao, A. et al. (2025). Absolute Zero: Reinforced Self-play Reasoning with Zero Data (arXiv:2505.03335v2).
