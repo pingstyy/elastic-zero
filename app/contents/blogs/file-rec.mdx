@@ -1,167 +1,459 @@
 ---
-title: "Building a Recursive File System with React: A Deep Dive"
-description: "Explore how to create a recursive file system in React. This blog post provides a comprehensive guide on building a file system where folders and files can be nested, added, renamed, and deleted."
+title: "DeepSeek & a few Others"
+description: "Simplistic  overview of DeepSeek-R1's architecture and training. It details how new attention methods and refined learning processes contribute to more capable and efficient large language models."
 date: 02-09-2024
 authors:
   - avatar: "https://ui.shadcn.com/avatars/02.png"
-    handle: nisabmohd
-    username: Nisab Mohd
-    handleUrl: "https://github.com/nisabmohd"
+    handle: sp4ss
+    username: sp4s-s
+    handleUrl: "https://github.com/sp4s-s"
 cover: "https://img.freepik.com/premium-vector/many-monsters-various-colors-doodle-come-bless-birthday-happy_577083-84.jpg?w=826"
 ---
 
-## Introduction: Crafting a Recursive File System in React
+## DeepSeek-R1: Making Giant LLMs Smarter, Faster, and Way More Friendly\!
 
-In modern web development, creating interactive and dynamic file systems is a common requirement. Whether for managing documents, organizing projects, or building complex data structures, having a robust file system is crucial. In this blog post, we’ll explore how to build a recursive file system in React, focusing on nested folders and files that can be added, renamed, or deleted.
+### The Big Idea: Native Sparse Attention (NSA) \!
 
-Check out the project on [GitHub](https://github.com/nisabmohd/recursive-file-system-react) for a complete implementation.
+1.  **Smart Reading Strategy:** Imagine you're trying to quickly grasp a long article. You wouldn't obsess over every comma. You'd probably skim for the main points (the "coarse-grained" stuff) and then really focus on the key sentences or phrases (the "fine-grained" details). NSA does something similar. It takes a broad look at big chunks of info and also hones in on the super-important words. This helps it understand the overall context without getting lost in the weeds.
 
-## Project Overview
+2.  **Built for Speed (on Real Computers\!):** It’s one thing to have a great idea on paper, another to make it sing on a powerful computer. DeepSeek knew this. Their NSA isn't just theoretically faster; it's designed to work super well with the actual chips in your GPU (those graphics cards that are now AI powerhouses). They’ve got clever algorithms and optimized code that make sure it actually runs fast, saving memory and speeding up everything, especially when dealing with really long texts.
 
-The Recursive File System project is designed to simulate a file management system where users can interact with folders and files dynamically. It supports the following features:
+3.  **Learns to Be Lean:** This is key. NSA isn't just given a fixed pattern of what to ignore. It *learns* what’s important and what's not during training. It figures out how to be sparse as it gets smarter. This helps it avoid those annoying issues where older sparse attention methods might have been too rigid or even slowed things down when trying to learn.
 
-- **Adding New Folders and Files**: Create new folders and files within any existing folder.
-- **Renaming Items**: Change the name of folders and files.
-- **Deleting Items**: Remove folders and files from the file system.
-- **Nested Structure**: Handle nested folders and files to create a hierarchical view.
+What does this mean in real life? Huge gains\! NSA dramatically cuts down on memory use, sometimes by over 90%. That means DeepSeek-R1 can munch on incredibly long texts, up to 128,000 tokens long\! Imagine an AI that can read a whole book and actually *remember* all the details. Tests show NSA performs just as well as, or even better than, those "full attention" models on tricky reasoning tasks, all while being way more efficient. Pretty neat, huh?
 
-## Key Features and Implementation
+### More Than Just Attention: How DeepSeek-R1 Got Its Smarts
 
-### 1. Recursive Data Structure
+NSA is awesome, but DeepSeek-R1’s brainpower comes from a few other brilliant ideas working together:
 
-The core of the project is a recursive data structure that represents the file system. Each folder can contain other folders or files, and each file or folder has properties such as `id`, `name`, and `children` (for folders).
+1.  **A Committee of Experts (MoE) Architecture:** DeepSeek-R1 is massive, boasting 671 billion parameters in total. But here’s the trick: when it’s actually working on a task, it only activates a tiny fraction of those—around 37 billion. Think of it like this: if you have a huge team of experts, you don't call *everyone* for every single question. You call the *right* experts for the job. That’s what MoE does. It has specialized "expert" networks, and a clever "gating" mechanism decides which two experts are best suited for the current piece of information. This keeps the computing costs down while still letting the model be incredibly knowledgeable.
 
-Here’s a basic structure for a folder:
+    Here's a super simplified peek at how such an expert team might be arranged in code, even if the real thing is way more complex and spread across many computers:
 
-```jsx:data.js
-const folder = {
-  id: "1",
-  name: "Documents",
-  type: "folder",
-  children: [
-    { id: "2", name: "Resume.pdf", type: "file" },
-    { id: "3", name: "CoverLetter.docx", type: "file" },
-  ],
-};
-```
+    ```python
+    import torch
+    import torch.distributed as dist
+    from megatron.core import mpu
+    from megatron.model.fused_layer_norm import MixedFusedLayerNorm as LayerNorm
+    from megatron.model.moe import Top2Gating, MoE
 
-### 2. Components
+    class SimpleMoEModel(torch.nn.Module):
+        def __init__(self, hidden_dim, num_experts, world_size):
+            super().__init__()
+            self.top2_gate = Top2Gating(hidden_dim, num_experts, world_size)
+            self.experts = torch.nn.ModuleList([torch.nn.Sequential(
+                torch.nn.Linear(hidden_dim, hidden_dim * 2),
+                torch.nn.ReLU(),
+                torch.nn.Linear(hidden_dim * 2, hidden_dim)
+            ) for _ in range(num_experts)])
+            self.layer_norm = LayerNorm(hidden_dim)
 
-The project includes several key components to handle different aspects of the file system:
+        def forward(self, x):
+            x = self.layer_norm(x)
+            logits, dispatch_weights, combine_weights = self.top2_gate(x)
 
-- **FileExplorer**: Displays the entire file system and handles rendering folders and files.
+            expert_outputs = []
+            for i, expert in enumerate(self.experts):
+                expert_output_for_this_expert = expert(x)
+                expert_outputs.append(expert_output_for_this_expert)
 
-```jsx:file-explorer.jsx
-import React, { useState } from "react";
-import Folder from "./Folder";
-import File from "./File";
+            expert_outputs_stacked = torch.stack(expert_outputs, dim=1)
 
-const FileExplorer = () => {
-  const [files, setFiles] = useState(initialData); // initialData is your recursive data structure
+            final_output = torch.einsum("bsh,besh->bsh", combine_weights,
+            torch.einsum("bes,bse->bes", dispatch_weights, expert_outputs_stacked))
+            return final_output
+    ```
 
-  const addItem = (parentId, type) => {
-    // Logic to add a folder or file
-  };
+2.  **Learning to Reason, Step by Step (with a "Cold Start"):** DeepSeek-R1's training isn't just about showing it lots of text. It's a complex, multi-stage process that really hammers home the *reasoning* part. They don't just throw it into the deep end of Reinforcement Learning (RL), which is how models learn from trial and error. Instead, they give it a gentle "cold start" with some super high-quality examples of logical thinking. This sets it on the right path.
 
-  const renameItem = (id, newName) => {
-    // Logic to rename a folder or file
-  };
+    Then, it dives into full-blown RL, particularly using something called **Group Relative Policy Optimization (GRPO)**. Imagine a strict but fair teacher who rewards the AI for getting tough math problems right, even for showing the right steps. This is how DeepSeek-R1 learns to really *think* through problems, often reaching a point where its reasoning is incredibly advanced. They even generate new training data by having the model try to solve problems, then picking the best answers to learn from, creating a positive feedback loop\!
 
-  const deleteItem = (id) => {
-    // Logic to delete a folder or file
-  };
+    To give you a tiny taste of how models are trained across multiple GPUs, which is crucial for such a big RL process, here's a simplified example using DeepSpeed, a framework that helps distribute the work:
 
-  return (
-    <div>
-      {files.map((file) =>
-        file.type === "folder" ? (
-          <Folder
-            key={file.id}
-            folder={file}
-            onAdd={addItem}
-            onRename={renameItem}
-            onDelete={deleteItem}
-          />
-        ) : (
-          <File
-            key={file.id}
-            file={file}
-            onRename={renameItem}
-            onDelete={deleteItem}
-          />
+    ```python
+    import torch
+    import deepspeed
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+    from datasets import load_dataset
+    from torch.utils.data import Dataset
+
+    class CustomDataset(Dataset):
+        def __init__(self, dataset_source, tokenizer_instance):
+            self.tokenizer = tokenizer_instance
+            self.data = [entry for entry in dataset_source]
+        def __len__(self):
+            return len(self.data)
+        def __getitem__(self, index):
+            entry = self.data[index]
+            full_text = entry['prompt'] + entry['completion']
+            tokenized_input = self.tokenizer(full_text, return_tensors='pt', truncation=True, padding='max_length', max_length=512)
+            labels = tokenized_input.input_ids.clone()
+            prompt_mask = self.tokenizer(entry['prompt'], return_tensors='pt', truncation=True, padding='max_length', max_length=512).attention_mask
+            labels[0][prompt_mask.bool()[0]] = -100
+            return {'input_ids': tokenized_input.input_ids[0], 'attention_mask': tokenized_input.attention_mask[0], 'labels': labels[0]}
+
+    tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen1.5-1.8B", trust_remote_code=True)
+    tokenizer.pad_token = tokenizer.eos_token
+    model = AutoModelForCausalLM.from_pretrained("Qwen/Qwen1.5-1.8B", trust_remote_code=True)
+
+    training_dataset_raw = load_dataset("ybelkada/ultrachat", split="train[:5000]")
+    training_data_processed = CustomDataset(training_dataset_raw, tokenizer)
+    data_loader = torch.utils.data.DataLoader(training_data_processed, batch_size=4, shuffle=True)
+
+    def calculate_loss(model_outputs, true_labels):
+        loss_value = torch.nn.functional.cross_entropy(model_outputs.logits.view(-1, model_outputs.logits.size(-1)), true_labels.view(-1), ignore_index=-100)
+        return loss_value
+
+    current_device = torch.device("cuda")
+    model = model.to(current_device)
+    model_engine, optimizer, _, _ = deepspeed.initialize(model=model, model_parameters=model.parameters(), config="ds_config.json")
+
+    num_epochs = 3
+    for epoch in range(num_epochs):
+        for batch_data in data_loader:
+            batch_data = {key: value.to(current_device) for key, value in batch_data.items()}
+            model_outputs = model_engine(**batch_data)
+            loss = calculate_loss(model_outputs, batch_data['labels'])
+            model_engine.backward(loss)
+            model_engine.step()
+    ```
+
+
+3.  **Training Smarter, Not Harder (and Sharing the Goodies\!):** DeepSeek-R1 is also incredibly cheap to train, which is a huge deal. They’ve squeezed every last bit of efficiency out of their systems, even optimizing down to the low-level code that runs on the GPU. This means they can build these incredibly powerful models for a fraction of what it used to cost. Plus, they’re being super cool and sharing distilled, smaller versions of their models (from 1.5 billion to 70 billion parameters\!). These smaller models are still super smart because they've learned from the big DeepSeek-R1, making advanced AI much more accessible for everyone, even on more modest hardware.
+
+    One little trick that helps with training these huge models by saving precious memory is called **Gradient Checkpointing**. It essentially re-calculates some bits during training instead of storing them, which means you can fit bigger models or more data onto your GPU. Here’s how you might see it in action with a popular library like Hugging Face:
+
+    ```python
+    import os
+    import torch
+    from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments, Trainer
+    from datasets import load_dataset
+    from huggingface_hub import HfApi
+
+    model_identifier = "mistralai/Mistral-7B-v0.1"
+    tokenizer = AutoTokenizer.from_pretrained(model_identifier)
+    tokenizer.pad_token = tokenizer.eos_token
+
+    training_data_raw = load_dataset("lvwerra/stack-exchange-paired", split="train[:1000]")
+
+    class CustomTextDataset(torch.utils.data.Dataset):
+        def __init__(self, raw_dataset):
+            self.raw_dataset = raw_dataset
+        def __len__(self):
+            return len(self.raw_dataset)
+        def __getitem__(self, index):
+            combined_text = self.raw_dataset[index]['chosen'] + self.raw_dataset[index]['rejected']
+            tokenized_output = tokenizer(combined_text, return_tensors='pt', padding='max_length', truncation=True, max_length=512)
+            tokenized_output['labels'] = tokenized_output['input_ids'].clone()
+            return {k: v[0] for k, v in tokenized_output.items()}
+
+    class TrainingRunner:
+        def __init__(self, enable_checkpointing):
+            self.enable_checkpointing = enable_checkpointing
+            self.model = AutoModelForCausalLM.from_pretrained(model_identifier, gradient_checkpointing=enable_checkpointing)
+            self.model.config.use_cache = not enable_checkpointing
+        
+        def run_training(self):
+            output_dir_path = f"./out/{int(self.enable_checkpointing)}"
+            training_args = TrainingArguments(output_dir=output_dir_path,
+                                              per_device_train_batch_size=2,
+                                              num_train_epochs=1,
+                                              report_to=[],
+                                              logging_steps=1)
+
+            trainer = Trainer(model=self.model,
+                              tokenizer=tokenizer,
+                              args=training_args,
+                              train_dataset=CustomTextDataset(training_data_raw))
+            trainer.train()
+            self.model.push_to_hub(f"test-mistral-gc-{int(self.enable_checkpointing)}")
+
+    TrainingRunner(True).run_training()
+    TrainingRunner(False).run_training()
+
+    api_client = HfApi()
+    for variant_str in ["1", "0"]:
+        local_path = f"./out/{variant_str}"
+        os.makedirs(local_path, exist_ok=True)
+        with open(f"{local_path}/README.md", "w") as f:
+            f.write(f"This is a model trained with gradient checkpointing set to {bool(int(variant_str))}.")
+        api_client.upload_folder(repo_id=f"test-mistral-gc-{variant_str}", folder_path=local_path, path_in_repo=".", repo_type="model")
+    ```
+
+
+<Note type="warning">
+The actual memory benefits are clearest when you're dealing with really huge models and batch sizes. 
+</Note>
+
+### The Secret Ingredients: KV Cache, Rotary Embeddings, and Fast Attention
+
+Even beneath DeepSeek-R1's headline features, there are clever engineering feats that make all modern Transformers tick. Things like a super-smart way to cache information (the "Key-Value" cache), a cool way to tell the model about the order of words (Rotary Positional Embeddings), and "FlashAttention"-like speedups are all crucial. DeepSeek-R1 uses hyper-optimized versions of these, but understanding the basics helps you see the genius.
+
+Here’s a simplified, conceptual piece of code showing these foundational ideas in a custom Transformer setup:
+
+```python
+import torch
+import math
+import torch.nn.functional as F
+
+class RotaryPositionalEmbedding:
+    def __init__(self, embedding_dimension, max_sequence_length=2048):
+        self.frequencies = 10000 ** (-torch.arange(0, embedding_dimension, 2).float() / embedding_dimension)
+        time_steps = torch.arange(max_sequence_length)
+        freqs_at_pos = torch.einsum("i,j->ij", time_steps, self.frequencies)
+        self.cos_components = torch.cos(freqs_at_pos).unsqueeze(0).unsqueeze(2)
+        self.sin_components = torch.sin(freqs_at_pos).unsqueeze(0).unsqueeze(2)
+
+    def apply(self, input_tensor, position_index):
+        input_x1, input_x2 = input_tensor[..., ::2], input_tensor[..., 1::2]
+        rotated_x = torch.cat([input_x1 * self.cos_components[:, position_index] - input_x2 * self.sin_components[:, position_index],
+                               input_x1 * self.sin_components[:, position_index] + input_x2 * self.cos_components[:, position_index]], dim=-1)
+        return rotated_x
+
+class SimplifiedFlashAttention(torch.nn.Module):
+    def __init__(self, num_heads, model_dimension):
+        super().__init__()
+        self.num_heads = num_heads
+        self.head_dimension = model_dimension // num_heads
+        self.query_proj = torch.nn.Linear(model_dimension, model_dimension)
+        self.key_proj = torch.nn.Linear(model_dimension, model_dimension)
+        self.value_proj = torch.nn.Linear(model_dimension, model_dimension)
+        self.output_proj = torch.nn.Linear(model_dimension, model_dimension)
+        self.rotary_embed = RotaryPositionalEmbedding(self.head_dimension)
+        self.key_cache = {}
+        self.value_cache = {}
+
+    def forward(self, input_data, sequence_position_index, batch_identifier_index):
+        batch_size, sequence_length, _ = input_data.size()
+        
+        query = self.query_proj(input_data).view(batch_size, sequence_length, self.num_heads, -1).transpose(1, 2)
+        key = self.key_proj(input_data).view(batch_size, sequence_length, self.num_heads, -1).transpose(1, 2)
+        value = self.value_proj(input_data).view(batch_size, sequence_length, self.num_heads, -1).transpose(1, 2)
+
+        for i in range(batch_size):
+            self.key_cache.setdefault(batch_identifier_index[i], []).append(key[i])
+            self.value_cache.setdefault(batch_identifier_index[i], []).append(value[i])
+
+        full_keys = [torch.cat(self.key_cache[i], dim=1) for i in batch_identifier_index]
+        full_values = [torch.cat(self.value_cache[i], dim=1) for i in batch_identifier_index]
+        full_keys = torch.stack(full_keys, dim=0)
+        full_values = torch.stack(full_values, dim=0)
+
+        query = self.rotary_embed.apply(query, sequence_position_index)
+        full_keys = self.rotary_embed.apply(full_keys, sequence_position_index)
+
+        attention_scores = torch.matmul(query, full_keys.transpose(-2, -1)) / math.sqrt(self.head_dimension)
+        
+        causal_mask = torch.tril(torch.ones(sequence_length, full_keys.size(2), device=input_data.device)).unsqueeze(0).unsqueeze(0)
+        attention_scores = attention_scores.masked_fill(causal_mask == 0, -1e9)
+
+        attention_probabilities = F.softmax(attention_scores, dim=-1)
+        output = torch.matmul(attention_probabilities, full_values)
+        
+        output = output.transpose(1, 2).contiguous().view(batch_size, sequence_length, -1)
+        return self.output_proj(output)
+
+class TransformerDecoderBlock(torch.nn.Module):
+    def __init__(self, dimension, heads):
+        super().__init__()
+        self.attention_layer = SimplifiedFlashAttention(heads, dimension)
+        self.feed_forward = torch.nn.Sequential(
+            torch.nn.Linear(dimension, dimension * 4),
+            torch.nn.GELU(),
+            torch.nn.Linear(dimension * 4, dimension)
         )
-      )}
-    </div>
-  );
-};
+        self.norm1 = torch.nn.LayerNorm(dimension)
+        self.norm2 = torch.nn.LayerNorm(dimension)
 
-export default FileExplorer;
+    def forward(self, input_tensor, sequence_position, batch_id):
+        x = input_tensor + self.attention_layer(self.norm1(input_tensor), sequence_position, batch_id)
+        x = x + self.feed_forward(self.norm2(x))
+        return x
+
+class MinimalLLM(torch.nn.Module):
+    def __init__(self, num_layers, model_dimension, num_heads, vocab_size):
+        super().__init__()
+        self.token_embedding = torch.nn.Embedding(vocab_size, model_dimension)
+        self.transformer_blocks = torch.nn.ModuleList([TransformerDecoderBlock(model_dimension, num_heads) for _ in range(num_layers)])
+        self.final_norm = torch.nn.LayerNorm(model_dimension)
+        self.output_head = torch.nn.Linear(model_dimension, vocab_size, bias=False)
+
+    def forward(self, input_tokens, positions, batch_ids):
+        embedded_tokens = self.token_embedding(input_tokens)
+        for block in self.transformer_blocks:
+            embedded_tokens = block(embedded_tokens, positions, batch_ids)
+        return self.output_head(self.final_norm(embedded_tokens))
+```
+<Note type="warning">
+Its far off in terms of speed and efficiency from flash-attn.
+</Note>
+
+### A Side Quest: AI in Biology (AlphaFold 2)
+
+folding proteins.
+
+Here’s a *super simplified* example of some of the core ideas from AlphaFold 2, just to give you a flavor of how specialized AI systems tackle complex scientific problems:
+
+```python
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from torch.utils.data import DataLoader, Dataset
+import numpy as np
+import random
+import os
+import json
+import urllib.request
+import tarfile
+import math
+from pathlib import Path
+from typing import List
+
+class MSADataset(Dataset):
+    def __init__(self, data_path):
+        if not Path(data_path).exists():
+            print("Warning: Dummy dataset path. Please provide actual data for real use.")
+            self.samples = [{'msa': [random.randint(0, 20) for _ in range(128)],
+                             'coords': [[random.random() * 10 for _ in range(3)] for _ in range(128)]}
+                            for _ in range(100)]
+        else:
+            with open(data_path) as f:
+                self.samples = json.load(f)
+
+    def __len__(self):
+        return len(self.samples)
+
+    def __getitem__(self, index):
+        item = self.samples[index]
+        msa_tensor = torch.tensor(item['msa'], dtype=torch.long)
+        coords_tensor = torch.tensor(item['coords'], dtype=torch.float32)
+        return msa_tensor, coords_tensor
+
+def download_dummy_data():
+    dummy_data_path = "./data/dummy_dataset.json"
+    os.makedirs("./data", exist_ok=True)
+    if not Path(dummy_data_path).exists():
+        dummy_samples = [{'msa': [random.randint(0, 20) for _ in range(128)],
+                          'coords': [[random.random() * 10 for _ in range(3)] for _ in range(128)]}
+                         for _ in range(100)]
+        with open(dummy_data_path, 'w') as f:
+            json.dump(dummy_samples, f)
+        print(f"Created dummy dataset at {dummy_data_path}")
+    return dummy_data_path
+
+class RowAttentionWithPairBias(nn.Module):
+    def __init__(self, feature_dimension, num_heads):
+        super().__init__()
+        self.num_heads = num_heads
+        self.scale_factor = feature_dimension ** -0.5
+        self.query_key_value_proj = nn.Linear(feature_dimension, feature_dimension * 3)
+        self.output_proj = nn.Linear(feature_dimension, feature_dimension)
+
+    def forward(self, input_features, pairwise_bias_matrix):
+        batch_size, sequence_length, feature_dim = input_features.shape
+        qkv = self.query_key_value_proj(input_features).chunk(3, dim=-1)
+        query, key, value = map(lambda t: t.reshape(batch_size, sequence_length, self.num_heads, -1).transpose(1, 2), qkv)
+
+        attention_logits = (query @ key.transpose(-2, -1)) * self.scale_factor
+        attention_logits = attention_logits + pairwise_bias_matrix.unsqueeze(1)
+
+        attention_weights = attention_logits.softmax(dim=-1)
+        output_attention = (attention_weights @ value).transpose(1, 2).reshape(batch_size, sequence_length, feature_dim)
+        return self.output_proj(output_attention)
+
+class EvoformerBlock(nn.Module):
+    def __init__(self, feature_dimension, num_heads):
+        super().__init__()
+        self.row_attention_module = RowAttentionWithPairBias(feature_dimension, num_heads)
+        self.feed_forward_network = nn.Sequential(
+            nn.LayerNorm(feature_dimension),
+            nn.Linear(feature_dimension, feature_dimension * 4),
+            nn.GELU(),
+            nn.Linear(feature_dimension * 4, feature_dimension)
+        )
+        self.layer_norm_attn = nn.LayerNorm(feature_dimension)
+        self.layer_norm_ffn = nn.LayerNorm(feature_dimension)
+
+    def forward(self, msa_features, pairwise_features):
+        attn_out = self.row_attention_module(self.layer_norm_attn(msa_features), pairwise_features)
+        msa_features = msa_features + attn_out
+        
+        ffn_out = self.feed_forward_network(self.layer_norm_ffn(msa_features))
+        msa_features = msa_features + ffn_out
+        return msa_features
+
+class StructureModule(nn.Module):
+    def __init__(self, feature_dimension):
+        super().__init__()
+        self.coordinate_prediction_head = nn.Sequential(
+            nn.LayerNorm(feature_dimension),
+            nn.Linear(feature_dimension, 128),
+            nn.ReLU(),
+            nn.Linear(128, 3)
+        )
+
+    def forward(self, input_features):
+        return self.coordinate_prediction_head(input_features)
+
+class SimplifiedAlphaFold2(nn.Module):
+    def __init__(self, embedding_dim, num_heads, num_evoformer_blocks):
+        super().__init__()
+        self.sequence_embedding = nn.Embedding(21, embedding_dim)
+        self.evoformer_stack = nn.ModuleList([EvoformerBlock(embedding_dim, num_heads) for _ in range(num_evoformer_blocks)])
+        self.initial_pairwise_features = nn.Parameter(torch.randn(1, 128, 128))
+        self.structure_predictor = StructureModule(embedding_dim)
+
+    def forward(self, multiple_sequence_alignment):
+        main_sequence_features = self.sequence_embedding(multiple_sequence_alignment[:, 0])
+        
+        current_pairwise_features = self.initial_pairwise_features.clone().to(main_sequence_features.device)
+        for block in self.evoformer_stack:
+            main_sequence_features = block(main_sequence_features, current_pairwise_features)
+        
+        predicted_coordinates = self.structure_predictor(main_sequence_features)
+        return predicted_coordinates
+
+def coordinate_loss(predicted_coords, true_coords):
+    return F.mse_loss(predicted_coords, true_coords)
+
+def train_epoch(model_instance, data_loader_instance, optimizer_instance):
+    model_instance.train()
+    for msa_data, true_coordinates in data_loader_instance:
+        msa_data, true_coordinates = msa_data.cuda(), true_coordinates.cuda()
+        predicted_coordinates = model_instance(msa_data)
+        loss = coordinate_loss(predicted_coordinates, true_coordinates)
+        optimizer_instance.zero_grad()
+        loss.backward()
+        optimizer_instance.step()
+
+def run_alphafold_training_demo():
+    data_file_path = download_dummy_data()
+    dataset = MSADataset(data_file_path)
+    data_loader = DataLoader(dataset, batch_size=2, shuffle=True)
+    
+    model = SimplifiedAlphaFold2(embedding_dim=256, num_heads=4, num_evoformer_blocks=6).cuda()
+    optimizer = torch.optim.Adam(model.parameters(), lr=2e-4)
+
+    print("Starting simplified AlphaFold2 training demo...")
+    for epoch in range(10):
+        train_epoch(model, data_loader, optimizer)
+        print(f"Epoch {epoch+1} completed.")
+    torch.save(model.state_dict(), "alphafold2_tiny_demo.pt")
+    print("Simplified AlphaFold2 training demo finished and model saved.")
+
+if __name__ == '__main__':
+    run_alphafold_training_demo()
 ```
 
-- **Folder**: Renders folders and handles nested items.
+<Note type="warning">
+Refer to lucidrains or deepmind repos for full implementations
+</Note>
 
-```jsx:folder.jsx
-import React from "react";
-import FileExplorer from "./FileExplorer";
 
-const Folder = ({ folder, onAdd, onRename, onDelete }) => {
-  return (
-    <div>
-      <h3>{folder.name}</h3>
-      <button onClick={() => onAdd(folder.id, "folder")}>Add Folder</button>
-      <button onClick={() => onAdd(folder.id, "file")}>Add File</button>
-      <button onClick={() => onRename(folder.id, "New Name")}>Rename</button>
-      <button onClick={() => onDelete(folder.id)}>Delete</button>
-      {folder.children && <FileExplorer files={folder.children} />}
-    </div>
-  );
-};
+### So, What's the Big Takeaway?
 
-export default Folder;
-```
+DeepSeek-R1's and other new model architectural and training methodologies demonstrate advancements in large language model development. Observed performance metrics indicate a capacity for complex reasoning tasks, often aligning with or exceeding established baselines, alongside improved operational efficiency. The integration of long-context processing further expands potential application domains, including document analysis and scientific inquiry.
 
-- **File**: Renders individual files with options to rename and delete.
+The implementation of natively trainable sparse attention indicates a design trajectory towards intrinsic efficiency, mitigating computational and memory resource demands from initial model construction. This approach aims to facilitate the development of more streamlined information processing systems.
 
-```jsx:file.jsx
-import React from "react";
-
-const File = ({ file, onRename, onDelete }) => {
-  return (
-    <div>
-      <p>{file.name}</p>
-      <button onClick={() => onRename(file.id, "New Name")}>Rename</button>
-      <button onClick={() => onDelete(file.id)}>Delete</button>
-    </div>
-  );
-};
-
-export default File;
-```
-
-### 3. Handling State and Actions
-
-State management is handled using React hooks like `useState` to manage the file system data. Actions such as adding, renaming, and deleting items update the state accordingly.
-
-```jsx
-const [files, setFiles] = useState(initialData);
-
-const addItem = (parentId, type) => {
-  // Logic to add a new item to the file system
-};
-
-const renameItem = (id, newName) => {
-  // Logic to rename an existing item
-};
-
-const deleteItem = (id) => {
-  // Logic to delete an item
-};
-```
-
-## Conclusion: Building a Dynamic File System with React
-
-Creating a recursive file system in React is a powerful way to manage hierarchical data and provide a dynamic user experience. By leveraging React's component-based architecture and state management, you can build interactive file systems that handle complex nested structures efficiently.
-
-Check out the full implementation on [GitHub](https://github.com/nisabmohd/recursive-file-system-react) and explore how these concepts can be applied to your own projects. Happy coding!
-
-🚀📁
+Ongoing development within the field addresses further optimization requirements, such as output format precision, enhanced software engineering support, and robust multilingual performance. The public availability of DeepSeek-R1 variants supports distributed research and development efforts. These elements collectively contribute to the progression of large language model capabilities and resource management.

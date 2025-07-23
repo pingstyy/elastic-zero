@@ -21,7 +21,7 @@ export default function BlogIndex({ loaderData: blogs }: Route.ComponentProps) {
     <div className="flex flex-col gap-1 sm:min-h-[91vh] min-h-[88vh] pt-2">
       <div className="mb-7 flex flex-col gap-2">
         <h1 className="sm:text-3xl text-2xl font-extrabold">
-          The latest blogs of this product
+          The latest blogs of this ...
         </h1>
         <p className="text-muted-foreground sm:text-[16.5px] text-[14.5px]">
           All the latest blogs and news, straight from the team.

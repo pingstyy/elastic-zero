@@ -6,11 +6,11 @@ import { page_routes } from "~/lib/routes-config";
 
 export function meta({ }: Route.MetaArgs) {
   return [
-    { title: "MLDocs - Template" },
+    { title: "Elastic-Zero" },
     {
-      name: "description",
+      name: "Machine Learning implementation docsheet",
       content:
-        "This comprehensive documentation template, crafted with Next.js and available as open-source, delivers a sleek and responsive design, tailored to meet all your project documentation requirements.",
+        "Combination of  elastic reasoning and scalable chain-of-thought (CoT) to solve complex problems with precision and flexibility. Designed for next-generation machine intelligence, Absolute Zero enables adaptive task solving, robust inference, and efficient knowledge integration. ",
     },
   ];
 }
