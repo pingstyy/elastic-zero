@@ -65,4 +65,5 @@ Docs
 ```
 
 
-npm install rehype-katex remark-math
+ rm -rf /tmp/empty-cache 
+ npm install --cache /tmp/empty-cache  
