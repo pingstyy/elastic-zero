@@ -1,3 +1,8 @@
+```shell
+npm install
+npm run dev 
+```
+
 Docs
 ```md
 # 📘 Documentation Structure
